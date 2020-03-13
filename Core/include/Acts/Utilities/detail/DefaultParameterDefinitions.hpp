@@ -34,7 +34,7 @@ enum ParDef : unsigned int {
   BoundParsDim  /// < The local dimensions
 };
 
-/// Components of a free parameters vector.
+/// Components of a free track parameters vector.
 ///
 /// To be used to access components by named indices instead of just numbers.
 /// This must be a regular `enum` and not a scoped `enum class` to allow
