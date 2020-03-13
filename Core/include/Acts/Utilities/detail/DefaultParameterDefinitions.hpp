@@ -15,23 +15,44 @@
 #include "Acts/Utilities/ParameterTypes.hpp"
 
 namespace Acts {
-enum ParDef : unsigned int {
-  eLOC_0 = 0,  ///< first coordinate in local surface frame
-  eLOC_1 = 1,  ///< second coordinate in local surface frame
+
+/// Components of a bound track parameters vector.
+///
+/// To be used to access components by named indices instead of just numbers.
+/// This must be a regular `enum` and not a scoped `enum class` to allow
+/// implicit conversion to an integer. The enum value are thus visible directly
+/// in `namespace Acts` and are prefixed to avoid naming collisions.
+enum BoundParametersIndices : unsigned int {
+  eBoundLoc0 = 0,
+  eBoundLoc1 = 1,
+  eBoundPhi = 2,
+  eBoundTheta = 3,
+  // Global inverse-momentum-like parameter, i.e. q/p or 1/p
+  eBoundSignedInverseP = 4,
+  eBoundTime = 5,
+  // Last uninitialized value contains the total number of components
+  eBoundParametersSize,
+  // The following alias without prefix are
+  // Generic spatial coordinates on the local surface
+  eLOC_0 = eBoundLoc0,
+  eLOC_1 = eBoundLoc1,
+  // Spatial coordinates on a disk in polar coordinates
   eLOC_R = eLOC_0,
   eLOC_PHI = eLOC_1,
-  eLOC_RPHI = eLOC_0,
-  eLOC_Z = eLOC_1,
+  // Spatial coordinates on a disk in Cartesian coordinates
   eLOC_X = eLOC_0,
   eLOC_Y = eLOC_1,
+  // Spatial coordinates on a cylinder
+  eLOC_RPHI = eLOC_0,
+  eLOC_Z = eLOC_1,
+  // Distance-of-closest approach on a virtual perigee surface
   eLOC_D0 = eLOC_0,
   eLOC_Z0 = eLOC_1,
-  ePHI = 2,    ///< phi direction of momentum in global frame
-  eTHETA = 3,  ///< theta direction of momentum in global frame
-  eQOP = 4,    ///< charge/momentum for charged tracks, for neutral tracks it is
-               /// 1/momentum
-  eT = 5,      /// < The time of the particle
-  BoundParsDim  /// < The local dimensions
+  ePHI = eBoundPhi,
+  eTHETA = eBoundTheta,
+  eQOP = eBoundSignedInverseP,
+  eT = eBoundTime,
+  BoundParsDim = eBoundParametersSize,
 };
 
 /// Components of a free track parameters vector.
@@ -85,7 +106,8 @@ enum SpacePointIndices : unsigned int {
   SpacePointDim = eSpacePointSize,
 };
 
-using ParID_t = ParDef;
+using ParDef = BoundParametersIndices;
+using ParID_t = BoundParametersIndices;
 using ParValue_t = double;
 
 ///
