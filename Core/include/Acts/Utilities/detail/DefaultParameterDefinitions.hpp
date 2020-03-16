@@ -50,7 +50,6 @@ enum BoundParametersIndices : unsigned int {
   eTHETA = eBoundTheta,
   eQOP = eBoundSignedInverseP,
   eT = eBoundTime,
-  BoundParsDim = eBoundParametersSize,
 };
 
 /// Underlying fundamental scalar type for bound track parameters.
@@ -79,8 +78,6 @@ enum FreeParametersIndices : unsigned int {
   eFreeSignedInverseP = 7u,
   // Last uninitialized value contains the total number of components
   eFreeParametersSize,
-  // For backward compatibility
-  FreeParsDim = eFreeParametersSize,
 };
 
 /// Underlying fundamental scalar type for free track parameters.
@@ -106,8 +103,6 @@ enum SpacePointIndices : unsigned int {
   eSpE = eSpT,
   // Last uninitialized value contains the total number of components
   eSpacePointSize,
-  // for backward compatibility
-  SpacePointDim = eSpacePointSize,
 };
 
 /// Underlying fundamental scalar type for space points.
