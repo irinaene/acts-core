@@ -286,8 +286,4 @@ using par_type = BoundParametersTraits<idx>;
 template <BoundParametersIndices idx>
 using par_type_t = typename BoundParametersTraits<idx>::type;
 
-// For backward compatibility. New code must use the
-// `e{BoundParameters,FreeParameters,SpacePoint}Size` enum values.
-inline constexpr unsigned int BoundParsDim = eBoundParametersSize;
-
 }  // namespace Acts
