@@ -80,8 +80,7 @@ singleTrackAlignmentToChi2Derivatives(
     }
     // Remember the index of this surface within the to-be-aligned surfaces pool
     surfaceIndices.push_back(it->second);
-    // Rember the index of the state within the trajectory and its smoothing
-    // order
+    // Rember the index of the state within the trajectory
     alignStates.push_back(ts.index());
     // Add up measurement dimension
     alignMeasurementsDim += ts.calibratedSize();
@@ -102,23 +101,26 @@ singleTrackAlignmentToChi2Derivatives(
   size_t alignParametersDim = eBoundParametersSize * alignStates.size();
 
   // The measurement covariance
-  ActsMatrixX<BoundParametersScalar> measurementCovariance;
-  measurementCovariance.resize(alignMeasurementsDim, alignMeasurementsDim);
+  ActsMatrixX<BoundParametersScalar> measurementCovariance =
+      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim,
+                                               alignMeasurementsDim);
   // The bound parameters to measurement projection matrix
-  ActsMatrixX<BoundParametersScalar> projectionMatrix;
-  projectionMatrix.resize(alignMeasurementsDim, alignParametersDim);
+  ActsMatrixX<BoundParametersScalar> projectionMatrix =
+      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim,
+                                               alignParametersDim);
   // The derivative of residual w.r.t. alignment parameters
-  ActsMatrixX<BoundParametersScalar> alignmentToResidualDerivative;
-  alignmentToResidualDerivative.resize(alignMeasurementsDim, alignDof);
+  ActsMatrixX<BoundParametersScalar> alignmentToResidualDerivative =
+      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim, alignDof);
   // The track parameters covariance
-  ActsMatrixX<BoundParametersScalar> trackParametersCovariance;
-  trackParametersCovariance.resize(alignParametersDim, alignParametersDim);
+  ActsMatrixX<BoundParametersScalar> trackParametersCovariance =
+      ActsMatrixX<BoundParametersScalar>::Zero(alignParametersDim,
+                                               alignParametersDim);
   // The residual
-  ActsVectorX<ParValue_t> residual;
-  residual.resize(alignMeasurementsDim);
+  ActsVectorX<ParValue_t> residual =
+      ActsVectorX<ParValue_t>::Zero(alignMeasurementsDim);
 
   // Unpack global track parameters covariance and the starting row/column for
-  // smoothed states
+  // all smoothed states
   const auto& [sourceTrackParamsCov, stateRowIndices] = globalTrackParamsCov;
   // Loop over the alignment-relevant states to fill those alignment matrixs
   // This is done in backward order
@@ -155,7 +157,7 @@ singleTrackAlignmentToChi2Derivatives(
     // @Todo: add helper function to select rows/columns of a matrix
     for (size_t iColState = 0; iColState < alignStates.size(); iColState++) {
       size_t colStateIndex = alignStates.at(iColState);
-      // Retrieve the block from the provided full covariance matrix
+      // Retrieve the block from the source covariance matrix
       CovMatrix_t correlation =
           sourceTrackParamsCov
               .block<eBoundParametersSize, eBoundParametersSize>(
@@ -170,13 +172,14 @@ singleTrackAlignmentToChi2Derivatives(
   }
 
   // Calculate the chi2 derivatives based on the alignment matrixs
-  ActsVectorX<BoundParametersScalar> chi2FirstDerivative;
-  ActsMatrixX<BoundParametersScalar> chi2SecondDerivative;
-  chi2FirstDerivative.resize(alignDof);
-  chi2SecondDerivative.resize(alignDof, alignDof);
+  ActsVectorX<BoundParametersScalar> chi2FirstDerivative =
+      ActsVectorX<BoundParametersScalar>::Zero(alignDof);
+  ActsMatrixX<BoundParametersScalar> chi2SecondDerivative =
+      ActsMatrixX<BoundParametersScalar>::Zero(alignDof, alignDof);
   // The covariance of residual
-  ActsMatrixX<BoundParametersScalar> residualCovariance;
-  residualCovariance.resize(alignMeasurementsDim, alignMeasurementsDim);
+  ActsMatrixX<BoundParametersScalar> residualCovariance =
+      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim,
+                                               alignMeasurementsDim);
   residualCovariance = measurementCovariance - projectionMatrix *
                                                    trackParametersCovariance *
                                                    projectionMatrix.transpose();
