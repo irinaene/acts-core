@@ -15,6 +15,8 @@
 #include "Acts/Utilities/Definitions.hpp"
 #include "Acts/Utilities/ParameterDefinitions.hpp"
 
+#include <unordered_map>
+
 namespace Acts {
 namespace detail {
 /// Calculate the first and second derivative of chi2 w.r.t. alignment
@@ -35,55 +37,57 @@ namespace detail {
 /// @param globalTrackParamsCov The global track parameters covariance for a
 /// single track and the starting row/column for smoothed states. This contains
 /// all smoothed track states including those non-measurement states. Selection
-/// of certain rows/columns for alignment-relevant states is needed.
-/// @param alignSurfaces The indexed surfaces to be aligned
+/// of certain rows/columns for measurement states is needed.
+/// @param alignableSurfaces The indexed surfaces to be aligned
 ///
 /// @return The first and second derivative of chi2 w.r.t. alignment parameters
 /// and indices of surfaces for those alignment parameters
 template <typename source_link_t, typename parameters_t = BoundParameters>
 std::tuple<ActsVectorX<BoundParametersScalar>,
-           ActsMatrixX<BoundParametersScalar>, std::vector<size_t>>
+           ActsMatrixX<BoundParametersScalar>, ActsVectorX<size_t>>
 singleTrackAlignmentToChi2Derivatives(
     const MultiTrajectory<source_link_t>& multiTraj, const size_t& entryIndex,
     const std::pair<ActsMatrixX<BoundParametersScalar>,
                     std::unordered_map<size_t, size_t>>& globalTrackParamsCov,
-    const std::unordered_map<const Surface*, size_t>& alignSurfaces) {
+    const std::unordered_map<const Surface*, size_t>& alignableSurfaces) {
   using CovMatrix_t = typename parameters_t::CovMatrix_t;
 
-  // Remember the indices of to-be-aligned surfaces relevant with this track
-  std::vector<size_t> surfaceIndices;
-  surfaceIndices.reserve(15);
-  // Remember the index within the trajectory of the alignment-relevant
-  // measurement states
-  std::vector<size_t> alignStates;
-  alignStates.reserve(15);
-  // Number of smoothed states on the trajectory
+  // Remember the index within the trajectory and its reference surface index
+  // within the to-be-aligned surfaces pool of the measurement states
+  std::vector<std::pair<size_t, size_t>> measurementStates;
+  measurementStates.reserve(15);
+  // Number of smoothed states on the track
   size_t nSmoothedStates = 0;
-  // Dimension of alignment-relevant measurements on the trajectory
-  size_t alignMeasurementsDim = 0;
+  // Dimension of measurements on the track
+  size_t trackMeasurementsDim = 0;
+  // Number of to-be-aligned surfaces on the track
+  size_t nAlignSurfaces = 0;
 
-  // Visit the track states on the trajectory
+  // Visit the track states on the track
   multiTraj.visitBackwards(entryIndex, [&](const auto& ts) {
     // Remember the number of smoothed states
     if (ts.hasSmoothed()) {
       nSmoothedStates++;
     }
-    // Only measurement states matter
+    // Only measurement states matter (we can't align non-measurement states,
+    // no?)
     if (not ts.typeFlags().test(TrackStateFlag::MeasurementFlag)) {
       return true;
     }
     // Check if the reference surface is to be aligned
+    // @Todo: consider the case when some of the Dofs are fixed for one surface
+    size_t surfaceIndex = SIZE_MAX;
     const auto surface = &ts.referenceSurface();
-    auto it = alignSurfaces.find(surface);
-    if (it == alignSurfaces.end()) {
-      return true;
+    auto it = alignableSurfaces.find(surface);
+    if (it != alignableSurfaces.end()) {
+      surfaceIndex = it->second;
+      nAlignSurfaces++;
     }
-    // Remember the index of this surface within the to-be-aligned surfaces pool
-    surfaceIndices.push_back(it->second);
-    // Rember the index of the state within the trajectory
-    alignStates.push_back(ts.index());
+    // Rember the index of the state within the trajectory and the index of the
+    // surface within the to-be-aligned surfaces pool
+    measurementStates.push_back({ts.index(), surfaceIndex});
     // Add up measurement dimension
-    alignMeasurementsDim += ts.calibratedSize();
+    trackMeasurementsDim += ts.calibratedSize();
     return true;
   });
 
@@ -93,40 +97,44 @@ singleTrackAlignmentToChi2Derivatives(
          trackParamsCov.rows() == eBoundParametersSize * nSmoothedStates);
 
   // @Todo: put the following into separate functions
-  // Prepare the alignment matrixs composed by components from the
-  // alignment-relevant track states
-  // The alignment degree of freedom
-  size_t alignDof = eAlignmentParametersSize * surfaceIndices.size();
-  // Dimension of alignment-relevant parameters on the trajectory
-  size_t alignParametersDim = eBoundParametersSize * alignStates.size();
+  // Prepare the alignment matrixs composed by components from the measurement
+  // states The alignment degree of freedom
+  size_t alignDof = eAlignmentParametersSize * nAlignSurfaces;
+  // Dimension of global track parameters (from only measurement states) on the
+  // track
+  size_t trackParametersDim = eBoundParametersSize * measurementStates.size();
 
+  // The indices of aligned surfaces on the track
+  ActsVectorX<size_t> surfaceIndices =
+      ActsVectorX<size_t>::Zero(nAlignSurfaces);
   // The measurement covariance
   ActsMatrixX<BoundParametersScalar> measurementCovariance =
-      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim,
-                                               alignMeasurementsDim);
+      ActsMatrixX<BoundParametersScalar>::Zero(trackMeasurementsDim,
+                                               trackMeasurementsDim);
   // The bound parameters to measurement projection matrix
   ActsMatrixX<BoundParametersScalar> projectionMatrix =
-      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim,
-                                               alignParametersDim);
+      ActsMatrixX<BoundParametersScalar>::Zero(trackMeasurementsDim,
+                                               trackParametersDim);
   // The derivative of residual w.r.t. alignment parameters
   ActsMatrixX<BoundParametersScalar> alignmentToResidualDerivative =
-      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim, alignDof);
+      ActsMatrixX<BoundParametersScalar>::Zero(trackMeasurementsDim, alignDof);
   // The track parameters covariance
   ActsMatrixX<BoundParametersScalar> trackParametersCovariance =
-      ActsMatrixX<BoundParametersScalar>::Zero(alignParametersDim,
-                                               alignParametersDim);
+      ActsMatrixX<BoundParametersScalar>::Zero(trackParametersDim,
+                                               trackParametersDim);
   // The residual
   ActsVectorX<ParValue_t> residual =
-      ActsVectorX<ParValue_t>::Zero(alignMeasurementsDim);
+      ActsVectorX<ParValue_t>::Zero(trackMeasurementsDim);
 
   // Unpack global track parameters covariance and the starting row/column for
   // all smoothed states
   const auto& [sourceTrackParamsCov, stateRowIndices] = globalTrackParamsCov;
-  // Loop over the alignment-relevant states to fill those alignment matrixs
-  // This is done in backward order
-  size_t iMeasurement = alignMeasurementsDim;
-  size_t iParams = alignParametersDim;
-  for (const auto& rowStateIndex : alignStates) {
+  // Loop over the measurement states to fill those alignment matrixs
+  // This is done in reverse order
+  size_t iMeasurement = trackMeasurementsDim;
+  size_t iParams = trackParametersDim;
+  size_t iSurface = nAlignSurfaces;
+  for (const auto& [rowStateIndex, surfaceIndex] : measurementStates) {
     const auto& state = multiTraj.getTrackState(rowStateIndex);
     size_t measdim = state.calibratedSize();
     // Update index of current measurement and parameter
@@ -151,12 +159,17 @@ singleTrackAlignmentToChi2Derivatives(
 
     // (d) @Todo: Get the derivative of alignment parameters w.r.t. measurement
     // or residual
+    if (surfaceIndex != SIZE_MAX) {
+      iSurface -= 1;
+      surfaceIndices.row(iSurface) = surfaceIndex;
+    }
 
-    // (e) Get and fill the track parameters covariance matrix (for only
-    // alignment-relevant states)
+    // (e) Extract and fill the track parameters covariance matrix for only
+    // measurement states
     // @Todo: add helper function to select rows/columns of a matrix
-    for (size_t iColState = 0; iColState < alignStates.size(); iColState++) {
-      size_t colStateIndex = alignStates.at(iColState);
+    for (size_t iColState = 0; iColState < measurementStates.size();
+         iColState++) {
+      size_t colStateIndex = measurementStates.at(iColState).first;
       // Retrieve the block from the source covariance matrix
       CovMatrix_t correlation =
           sourceTrackParamsCov
@@ -164,7 +177,7 @@ singleTrackAlignmentToChi2Derivatives(
                   stateRowIndices.at(rowStateIndex),
                   stateRowIndices.at(colStateIndex));
       // Fill the block of the target covariance matrix
-      size_t iCol = alignParametersDim - (iColState + 1) * eBoundParametersSize;
+      size_t iCol = trackParametersDim - (iColState + 1) * eBoundParametersSize;
       trackParametersCovariance
           .block<eBoundParametersSize, eBoundParametersSize>(iParams, iCol) =
           correlation;
@@ -178,8 +191,8 @@ singleTrackAlignmentToChi2Derivatives(
       ActsMatrixX<BoundParametersScalar>::Zero(alignDof, alignDof);
   // The covariance of residual
   ActsMatrixX<BoundParametersScalar> residualCovariance =
-      ActsMatrixX<BoundParametersScalar>::Zero(alignMeasurementsDim,
-                                               alignMeasurementsDim);
+      ActsMatrixX<BoundParametersScalar>::Zero(trackMeasurementsDim,
+                                               trackMeasurementsDim);
   residualCovariance = measurementCovariance - projectionMatrix *
                                                    trackParametersCovariance *
                                                    projectionMatrix.transpose();
