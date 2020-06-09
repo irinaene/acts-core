@@ -32,10 +32,10 @@ namespace detail {
 /// @param multiTraj The MultiTrajectory containing the trajectory to be
 /// investigated
 /// @param entryIndex The trajectory entry index
-/// @param fullTrackParamsCov The global track parameters covariance for a
-/// single track. This contains all smoothed track states including those
-/// non-measurement states. Selection of certain rows/columns for
-/// alignment-relevant states is needed.
+/// @param globalTrackParamsCov The global track parameters covariance for a
+/// single track and the starting row/column for smoothed states. This contains
+/// all smoothed track states including those non-measurement states. Selection
+/// of certain rows/columns for alignment-relevant states is needed.
 /// @param alignSurfaces The indexed surfaces to be aligned
 ///
 /// @return The first and second derivative of chi2 w.r.t. alignment parameters
@@ -45,18 +45,17 @@ std::tuple<ActsVectorX<BoundParametersScalar>,
            ActsMatrixX<BoundParametersScalar>, std::vector<size_t>>
 singleTrackAlignmentToChi2Derivatives(
     const MultiTrajectory<source_link_t>& multiTraj, const size_t& entryIndex,
-    const ActsMatrixX<BoundParametersScalar>& fullTrackParamsCov,
+    const std::pair<ActsMatrixX<BoundParametersScalar>,
+                    std::unordered_map<size_t, size_t>>& globalTrackParamsCov,
     const std::unordered_map<const Surface*, size_t>& alignSurfaces) {
   using CovMatrix_t = typename parameters_t::CovMatrix_t;
 
   // Remember the indices of to-be-aligned surfaces relevant with this track
   std::vector<size_t> surfaceIndices;
   surfaceIndices.reserve(15);
-  // Remember the index within the trajectory and smoothing order of the
-  // alignment-relevant measurement states (The smoothing order is needed to
-  // retrieve relevant elements stored in the full global track parameters
-  // covariance)
-  std::vector<std::pair<size_t, size_t>> alignStates;
+  // Remember the index within the trajectory of the alignment-relevant
+  // measurement states
+  std::vector<size_t> alignStates;
   alignStates.reserve(15);
   // Number of smoothed states on the trajectory
   size_t nSmoothedStates = 0;
@@ -83,7 +82,7 @@ singleTrackAlignmentToChi2Derivatives(
     surfaceIndices.push_back(it->second);
     // Rember the index of the state within the trajectory and its smoothing
     // order
-    alignStates.push_back({ts.index(), nSmoothedStates});
+    alignStates.push_back(ts.index());
     // Add up measurement dimension
     alignMeasurementsDim += ts.calibratedSize();
     return true;
@@ -118,14 +117,17 @@ singleTrackAlignmentToChi2Derivatives(
   ActsVectorX<ParValue_t> residual;
   residual.resize(alignMeasurementsDim);
 
+  // Unpack global track parameters covariance and the starting row/column for
+  // smoothed states
+  const auto& [sourceTrackParamsCov, stateRowIndices] = globalTrackParamsCov;
+  // Loop over the alignment-relevant states to fill those alignment matrixs
+  // This is done in backward order
   size_t iMeasurement = alignMeasurementsDim;
   size_t iParams = alignParametersDim;
-  // Loop over the alignment-relevant states to fill those alignment matrixs
-  for (size_t iRowState = 0; iRowState < alignStates.size(); iRowState++) {
-    const auto& [index, iRowSmoothed] = alignStates.at(iRowState);
-    const auto& state = multiTraj.getTrackState(index);
+  for (const auto& rowStateIndex : alignStates) {
+    const auto& state = multiTraj.getTrackState(rowStateIndex);
     size_t measdim = state.calibratedSize();
-    // The index of current measurement and parameter
+    // Update index of current measurement and parameter
     iMeasurement -= measdim;
     iParams -= eBoundParametersSize;
     // (a) Get and fill the measurement covariance matrix
@@ -152,18 +154,17 @@ singleTrackAlignmentToChi2Derivatives(
     // alignment-relevant states)
     // @Todo: add helper function to select rows/columns of a matrix
     for (size_t iColState = 0; iColState < alignStates.size(); iColState++) {
-      size_t iColSmoothed = alignStates.at(iColState).second;
-      size_t iRowFull = (nSmoothedStates - iRowSmoothed) * eBoundParametersSize;
-      size_t iColFull = (nSmoothedStates - iColSmoothed) * eBoundParametersSize;
+      size_t colStateIndex = alignStates.at(iColState);
       // Retrieve the block from the provided full covariance matrix
       CovMatrix_t correlation =
-          fullTrackParamsCov.block<eBoundParametersSize, eBoundParametersSize>(
-              iRowFull, iColFull);
+          sourceTrackParamsCov
+              .block<eBoundParametersSize, eBoundParametersSize>(
+                  stateRowIndices.at(rowStateIndex),
+                  stateRowIndices.at(colStateIndex));
       // Fill the block of the target covariance matrix
+      size_t iCol = alignParametersDim - (iColState + 1) * eBoundParametersSize;
       trackParametersCovariance
-          .block<eBoundParametersSize, eBoundParametersSize>(
-              iParams,
-              alignParametersDim - (iColState + 1) * eBoundParametersSize) =
+          .block<eBoundParametersSize, eBoundParametersSize>(iParams, iCol) =
           correlation;
     }
   }
