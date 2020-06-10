@@ -216,7 +216,7 @@ TrackAlignmentState trackAlignmentState(
     // (e) Extract and fill the track parameters covariance matrix for only
     // measurement states
     // @Todo: add helper function to select rows/columns of a matrix
-    for (size_t iColState = 0; iColState < measurementStates.size();
+    for (unsigned int iColState = 0; iColState < measurementStates.size();
          iColState++) {
       size_t colStateIndex = measurementStates.at(iColState).first;
       // Retrieve the block from the source covariance matrix

@@ -39,11 +39,11 @@ struct AlignmentResult {
   // The change of alignment parameters
   ActsVectorX<BoundParametersScalar> deltaAlignmentParameters;
 
-  // The covariance of alignment parameters
-  ActsMatrixX<BoundParametersScalar> alignmentCovariance;
-
   // The change of chi2
   double deltaChi2 = 0;
+
+  // The covariance of alignment parameters
+  ActsMatrixX<BoundParametersScalar> alignmentCovariance;
 
   // The minimized average chi2 per track
   // double averagedChi2 = std::numeric_limits<double>::max();
@@ -72,23 +72,22 @@ struct Alignment {
   /// @tparam source_link_t Source link type identifying uncalibrated input
   /// measurements.
   /// @tparam start_parameters_t Type of the initial parameters
-  /// @tparam kalman_fitter_options_t Type of the kalman fitter options
+  /// @tparam fitter_options_t Type of the kalman fitter options
   ///
   /// @param sourcelinks The fittable uncalibrated measurements
   /// @param sParameters The initial track parameters
-  /// @param kfOptions KalmanOptions steering the fit
+  /// @param fitOptions KalmanOptions steering the fit
   /// @param aSurfaces The indexed surfaces to be aligned
   ///
   /// @param result The alignment state for a single track
   template <typename source_link_t, typename start_parameters_t,
-            typename kalman_fitter_options_t>
+            typename fitter_options_t>
   Result<TrackAlignmentState> evaluateTrackAlignmentState(
       const std::vector<source_link_t>& sourcelinks,
-      const start_parameters_t& sParameters,
-      const kalman_fitter_options_t& kfOptions,
+      const start_parameters_t& sParameters, const fitter_options_t& fitOptions,
       const std::unordered_map<const Surface*, size_t>& aSurfaces) const {
     // Perform the fit
-    auto fitRes = m_fitter.fit(sourcelinks, sParameters, kfOptions);
+    auto fitRes = m_fitter.fit(sourcelinks, sParameters, fitOptions);
     if (not fitRes.ok()) {
       return fitRes.error();
     }
@@ -112,19 +111,19 @@ struct Alignment {
   // @tparam source_link_t Source link type identifying uncalibrated input
   /// measurements.
   /// @tparam start_parameters_t Type of the initial parameters
-  /// @tparam kalman_fitter_options_t Type of the kalman fitter options
+  /// @tparam fitter_options_t Type of the kalman fitter options
   ///
   /// @param inputs The pair of input source links and initial track parameters
   /// used to run fitting for one trajectory
-  /// @param kfOptions KalmanOptions steering the fit
+  /// @param fitOptions KalmanOptions steering the fit
   /// @param aSurfaces The indexed surfaces to be aligned
   /// @param alignResult [in, out] The aligned result
   template <typename source_link_t, typename start_parameters_t,
-            typename kalman_fitter_options_t>
+            typename fitter_options_t>
   Result<void> updateAlignmentParameters(
       const std::vector<std::pair<const std::vector<source_link_t>,
                                   const start_parameters_t>>& inputs,
-      const kalman_fitter_options_t& kfOptions,
+      const fitter_options_t& fitOptions,
       const std::unordered_map<const Surface*, size_t>& aSurfaces,
       AlignmentResult& alignResult) const {
     // The total alignment degree of freedom
@@ -139,7 +138,7 @@ struct Alignment {
     for (const auto& [sourcelinks, sParameters] : inputs) {
       // The result for one single track
       auto eRes = evaluateTrackAlignmentState(sourcelinks, sParameters,
-                                              kfOptions, aSurfaces);
+                                              fitOptions, aSurfaces);
       if (eRes.ok()) {
         const auto& alignState = eRes.value();
         for (const auto& [rowSurface, [ dstRow, srcRow ]] :
@@ -164,7 +163,7 @@ struct Alignment {
         }
       }
     }
-    // Check if the chi2 second derivative matrix is valid
+    // Check if the chi2 second derivative matrix inverse is valid
     if (sumChi2SecondDerivative.inverse().hasNaN()) {
       return AlignmentError::AlignmentParametersUpdateFailure;
     }
@@ -194,20 +193,20 @@ struct Alignment {
   // @tparam source_link_t Source link type identifying uncalibrated input
   /// measurements.
   /// @tparam start_parameters_t Type of the initial parameters
-  /// @tparam kalman_fitter_options_t Type of the kalman fitter options
+  /// @tparam fitter_options_t Type of the kalman fitter options
   ///
   /// @param inputs The pair of input source links and initial track parameters
   /// used to run fitting for one trajectory
-  /// @param kfOptions KalmanOptions steering the fit
+  /// @param fitOptions KalmanOptions steering the fit
   /// @param alignOptions AlignmentOptions steering the alignment
   ///
   /// @param result The alignment result
   template <typename source_link_t, typename start_parameters_t,
-            typename kalman_fitter_options_t>
+            typename fitter_options_t>
   Result<AlignmentResult> alignment(
       const std::vector<std::pair<const std::vector<source_link_t>,
                                   const start_parameters_t>>& inputs,
-      const kalman_fitter_options_t& kfOptions,
+      const fitter_options_t& fitOptions,
       const AlignmentOptions& alignOptions) const {
     // Construct an AlignmentResult object
     AlignmentResult alignRes;
@@ -223,7 +222,7 @@ struct Alignment {
     bool alignSucceed = false;
     for (unsigned int iIter = 0; iIter < alignOptions.maxIterations; iIter++) {
       auto uRes =
-          updateAlignmentParameters(inputs, kfOptions, aSurfaces, alignRes);
+          updateAlignmentParameters(inputs, fitOptions, aSurfaces, alignRes);
       if (not uRes.ok()) {
         return uRes.error();
       }
@@ -233,7 +232,6 @@ struct Alignment {
         break;
       }
     }
-
     // Alignment failure if not converged
     if (not alignSucceed) {
       alignRes.result = AlignmentError::ConvergeFailure;
