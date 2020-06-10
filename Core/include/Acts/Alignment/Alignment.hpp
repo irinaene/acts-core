@@ -82,7 +82,7 @@ struct Alignment {
   /// @param result The alignment state for a single track
   template <typename source_link_t, typename start_parameters_t,
             typename fitter_options_t>
-  Result<TrackAlignmentState> evaluateTrackAlignmentState(
+  Result<detail::TrackAlignmentState> evaluateTrackAlignmentState(
       const std::vector<source_link_t>& sourcelinks,
       const start_parameters_t& sParameters, const fitter_options_t& fitOptions,
       const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces)
@@ -102,7 +102,7 @@ struct Alignment {
         detail::trackAlignmentState(fitOutput.fittedStates, fitOutput.trackTip,
                                     globalTrackParamsCov, idxedAlignSurfaces);
     if (alignState.alignmentDof == 0) {
-      return AlignmentError : NoAlignmentDofOnTrack;
+      return AlignmentError::NoAlignmentDofOnTrack;
     }
     return alignState;
   }
@@ -138,10 +138,10 @@ struct Alignment {
     // Calculate contribution to chi2 derivatives from all input trajectories
     for (const auto& [sourcelinks, sParameters] : inputs) {
       // The result for one single track
-      auto eRes = evaluateTrackAlignmentState(sourcelinks, sParameters,
-                                              fitOptions, idxedAlignSurfaces);
-      if (eRes.ok()) {
-        const auto& alignState = eRes.value();
+      auto evaluateRes = evaluateTrackAlignmentState(
+          sourcelinks, sParameters, fitOptions, idxedAlignSurfaces);
+      if (evaluateRes.ok()) {
+        const auto& alignState = evaluateRes.value();
         for (const auto& [rowSurface, [ dstRow, srcRow ]] :
              alignState.alignedSurfaces) {
           // Fill the results into full chi2 derivative matrixs
@@ -223,10 +223,10 @@ struct Alignment {
     // Start the iteration to minimize the chi2
     bool converged = false;
     for (unsigned int iIter = 0; iIter < alignOptions.maxIterations; iIter++) {
-      auto uRes = updateAlignmentParameters(inputs, fitOptions,
-                                            idxedAlignSurfaces, alignRes);
-      if (not uRes.ok()) {
-        return uRes.error();
+      auto updateRes = updateAlignmentParameters(inputs, fitOptions,
+                                                 idxedAlignSurfaces, alignRes);
+      if (not updateRes.ok()) {
+        return updateRes.error();
       }
       // Check if it has converged against the provided precision
       if (alignRes.detalChi2 <= alignOptions.deltaChi2CutOff) {
