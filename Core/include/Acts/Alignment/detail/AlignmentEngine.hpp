@@ -25,7 +25,7 @@ namespace detail {
 ///
 struct TrackAlignmentState {
   // The measurements covariance
-  ActsMatrixX << ParValue_t > measurementCovariance;
+  ActsMatrixX<ParValue_t> measurementCovariance;
 
   // The track parameters covariance
   ActsMatrixX<BoundParametersScalar> trackParametersCovariance;
@@ -85,7 +85,7 @@ struct TrackAlignmentState {
 /// single track and the starting row/column for smoothed states. This contains
 /// all smoothed track states including those non-measurement states. Selection
 /// of certain rows/columns for measurement states is needed.
-/// @param aSurfaces The indexed surfaces to be aligned
+/// @param idxedAlignSurfaces The indexed surfaces to be aligned
 ///
 /// @return The track alignment state containing fundamental alignment
 /// ingredients
@@ -94,7 +94,7 @@ TrackAlignmentState trackAlignmentState(
     const MultiTrajectory<source_link_t>& multiTraj, const size_t& entryIndex,
     const std::pair<ActsMatrixX<BoundParametersScalar>,
                     std::unordered_map<size_t, size_t>>& globalTrackParamsCov,
-    const std::unordered_map<const Surface*, size_t>& aSurfaces) {
+    const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces) {
   using CovMatrix_t = typename parameters_t::CovMatrix_t;
 
   // Construct an alignment state
@@ -123,9 +123,9 @@ TrackAlignmentState trackAlignmentState(
     // @Todo: consider the case when some of the Dofs are fixed for one surface
     bool isAlignable = false;
     const auto surface = &ts.referenceSurface();
-    auto it = aSurfaces.find(surface);
-    if (it != aSurfaces.end()) {
-      // Remember the surface
+    auto it = idxedAlignSurfaces.find(surface);
+    if (it != idxedAlignSurfaces.end()) {
+      // Remember the surface and its index
       alignState.alignedSurfaces[surface].first = it->second;
       nAlignSurfaces++;
     }

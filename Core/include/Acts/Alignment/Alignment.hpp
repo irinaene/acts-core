@@ -77,7 +77,7 @@ struct Alignment {
   /// @param sourcelinks The fittable uncalibrated measurements
   /// @param sParameters The initial track parameters
   /// @param fitOptions KalmanOptions steering the fit
-  /// @param aSurfaces The indexed surfaces to be aligned
+  /// @param idxedAlignSurfaces The idxed surfaces to be aligned
   ///
   /// @param result The alignment state for a single track
   template <typename source_link_t, typename start_parameters_t,
@@ -85,7 +85,8 @@ struct Alignment {
   Result<TrackAlignmentState> evaluateTrackAlignmentState(
       const std::vector<source_link_t>& sourcelinks,
       const start_parameters_t& sParameters, const fitter_options_t& fitOptions,
-      const std::unordered_map<const Surface*, size_t>& aSurfaces) const {
+      const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces)
+      const {
     // Perform the fit
     auto fitRes = m_fitter.fit(sourcelinks, sParameters, fitOptions);
     if (not fitRes.ok()) {
@@ -99,7 +100,7 @@ struct Alignment {
     // Calculate the alignment state
     const auto alignState =
         detail::trackAlignmentState(fitOutput.fittedStates, fitOutput.trackTip,
-                                    globalTrackParamsCov, aSurfaces);
+                                    globalTrackParamsCov, idxedAlignSurfaces);
     if (alignState.alignmentDof == 0) {
       return AlignmentError : NoAlignmentDofOnTrack;
     }
@@ -116,7 +117,7 @@ struct Alignment {
   /// @param inputs The pair of input source links and initial track parameters
   /// used to run fitting for one trajectory
   /// @param fitOptions KalmanOptions steering the fit
-  /// @param aSurfaces The indexed surfaces to be aligned
+  /// @param idxedAlignSurfaces The indexed surfaces to be aligned
   /// @param alignResult [in, out] The aligned result
   template <typename source_link_t, typename start_parameters_t,
             typename fitter_options_t>
@@ -124,10 +125,10 @@ struct Alignment {
       const std::vector<std::pair<const std::vector<source_link_t>,
                                   const start_parameters_t>>& inputs,
       const fitter_options_t& fitOptions,
-      const std::unordered_map<const Surface*, size_t>& aSurfaces,
+      const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces,
       AlignmentResult& alignResult) const {
     // The total alignment degree of freedom
-    alignResult.dof = aSurfaces.size() * eAlignmentParametersSize;
+    alignResult.dof = idxedAlignSurfaces.size() * eAlignmentParametersSize;
     // Initialize derivative of chi2 w.r.t. aligment parameters for all tracks
     ActsVectorX<BoundParametersScalar> sumChi2Derivative =
         ActsVectorX<BoundParametersScalar>::Zero(alignResult.dof);
@@ -138,7 +139,7 @@ struct Alignment {
     for (const auto& [sourcelinks, sParameters] : inputs) {
       // The result for one single track
       auto eRes = evaluateTrackAlignmentState(sourcelinks, sParameters,
-                                              fitOptions, aSurfaces);
+                                              fitOptions, idxedAlignSurfaces);
       if (eRes.ok()) {
         const auto& alignState = eRes.value();
         for (const auto& [rowSurface, [ dstRow, srcRow ]] :
@@ -212,28 +213,29 @@ struct Alignment {
     AlignmentResult alignRes;
 
     // Assign index to the alignable surface
-    std::unordered_map<const Surface*, size_t> aSurfaces;
+    std::unordered_map<const Surface*, size_t> idxedAlignSurfaces;
     for (unsigned int iSurface = 0;
          iSurface < alignOptions.alignableSurfaces.size(); iSurface++) {
-      aSurfaces.emplace(alignOptions.alignableSurfaces.at(iSurface), iSurface);
+      idxedAlignSurfaces.emplace(alignOptions.alignableSurfaces.at(iSurface),
+                                 iSurface);
     }
 
     // Start the iteration to minimize the chi2
-    bool alignSucceed = false;
+    bool converged = false;
     for (unsigned int iIter = 0; iIter < alignOptions.maxIterations; iIter++) {
-      auto uRes =
-          updateAlignmentParameters(inputs, fitOptions, aSurfaces, alignRes);
+      auto uRes = updateAlignmentParameters(inputs, fitOptions,
+                                            idxedAlignSurfaces, alignRes);
       if (not uRes.ok()) {
         return uRes.error();
       }
       // Check if it has converged against the provided precision
       if (alignRes.detalChi2 <= alignOptions.deltaChi2CutOff) {
-        alignSucceed = true;
+        converged = true;
         break;
       }
     }
     // Alignment failure if not converged
-    if (not alignSucceed) {
+    if (not converged) {
       alignRes.result = AlignmentError::ConvergeFailure;
     }
 
