@@ -6,28 +6,58 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#pragma once
+
 #include <limits>
 #include <map>
 #include <vector>
 
 #include "Acts/Alignment/AlignmentError.hpp"
 #include "Acts/Alignment/detail/AlignmentEngine.hpp"
+#include "Acts/Fitter/KalmanFitter.hpp"
 #include "Acts/Fitter/detail/KalmanGlobalCovariance.hpp"
+#include "Acts/Geometry/GeometryContext.hpp"
+#include "Acts/MagneticField/MagneticFieldContext.hpp"
 #include "Acts/Surfaces/Surface.hpp"
+#include "Acts/Utilities/AlignmentDefinitions.hpp"
+#include "Acts/Utilities/CalibrationContext.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 #include "Acts/Utilities/Logger.hpp"
 #include "Acts/Utilities/Result.hpp"
 
 namespace Acts {
 ///
-/// @brief Options for alignment() call
+/// @brief Options for align() call
 ///
+/// @tparam fit_options_t The fit options type
+///
+template <typename fit_options_t>
 struct AlignmentOptions {
+  /// Deleted default constructor
+  AlignmentOptions() = delete;
+
+  /// AlignmentOptions
+  ///
+  /// @param fOptions The fit options
+  /// @param aSurfaces The alignable surfaces
+  /// @param chi2CufOff The alignment chi2 tolerance
+  /// @param maxIters The alignment maximum iterations
+  AlignmentOptions(const fit_options_t& fOptions,
+                   const std::vector<const Surface*>& aSurfaces = {},
+                   double chi2CutOff = 1, size_t maxIters = 1)
+      : fitOptions(fOptions),
+        alignableSurfaces(aSurfaces),
+        deltaChi2CutOff(chi2CutOff),
+        maxIterations(maxIters) {}
+
+  // The fit options
+  fit_options_t fitOptions;
+
   // The surfaces (or detector elements?) to be aligned
   std::vector<const Surface*> alignableSurfaces;
 
   // The alignment tolerance
-  double deltaChi2Cutoff = 1;
+  double deltaChi2CutOff = 1;
 
   // The maximum number of iterations to run alignment
   size_t maxIterations = 5;
@@ -72,19 +102,19 @@ struct Alignment {
   /// @tparam source_link_t Source link type identifying uncalibrated input
   /// measurements.
   /// @tparam start_parameters_t Type of the initial parameters
-  /// @tparam fitter_options_t Type of the kalman fitter options
+  /// @tparam fit_options_t The fit options type
   ///
   /// @param sourcelinks The fittable uncalibrated measurements
   /// @param sParameters The initial track parameters
-  /// @param fitOptions KalmanOptions steering the fit
+  /// @param fitOptions The fit Options steering the fit
   /// @param idxedAlignSurfaces The idxed surfaces to be aligned
   ///
-  /// @param result The alignment state for a single track
+  /// @result The alignment state for a single track
   template <typename source_link_t, typename start_parameters_t,
-            typename fitter_options_t>
+            typename fit_options_t>
   Result<detail::TrackAlignmentState> evaluateTrackAlignmentState(
       const std::vector<source_link_t>& sourcelinks,
-      const start_parameters_t& sParameters, const fitter_options_t& fitOptions,
+      const start_parameters_t& sParameters, const fit_options_t& fitOptions,
       const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces)
       const {
     // Perform the fit
@@ -109,24 +139,29 @@ struct Alignment {
 
   /// @brief update the alignment parameters
   ///
-  // @tparam source_link_t Source link type identifying uncalibrated input
-  /// measurements.
-  /// @tparam start_parameters_t Type of the initial parameters
-  /// @tparam fitter_options_t Type of the kalman fitter options
+  /// @tparam trajectory_container_t The trajectories container type
+  /// @tparam start_parameters_t The initial parameters container type
+  /// @tparam fit_options_t The fit options type
   ///
-  /// @param inputs The pair of input source links and initial track parameters
-  /// used to run fitting for one trajectory
-  /// @param fitOptions KalmanOptions steering the fit
+  /// @param trajectoryCollection The collection of trajectories as input of
+  /// fitting
+  /// @param startParametersCollection The collection of starting parameters as
+  /// input of fitting
+  /// @param fitOptions The fit Options steering the fit
   /// @param idxedAlignSurfaces The indexed surfaces to be aligned
   /// @param alignResult [in, out] The aligned result
-  template <typename source_link_t, typename start_parameters_t,
-            typename fitter_options_t>
+  template <typename trajectory_container_t,
+            typename start_parameters_container_t, typename fit_options_t>
   Result<void> updateAlignmentParameters(
-      const std::vector<std::pair<const std::vector<source_link_t>,
-                                  const start_parameters_t>>& inputs,
-      const fitter_options_t& fitOptions,
+      const trajectory_container_t& trajectoryCollection,
+      const start_parameters_container_t& startParametersCollection,
+      const fit_options_t& fitOptions,
       const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces,
       AlignmentResult& alignResult) const {
+    // The number of trajectories must be eual to the number of starting
+    // parameters
+    assert(trajectoryCollection.size() == startParametersCollection.size());
+
     // The total alignment degree of freedom
     alignResult.dof = idxedAlignSurfaces.size() * eAlignmentParametersSize;
     // Initialize derivative of chi2 w.r.t. aligment parameters for all tracks
@@ -135,37 +170,46 @@ struct Alignment {
     ActsMatrixX<BoundParametersScalar> sumChi2SecondDerivative =
         ActsMatrixX<BoundParametersScalar>::Zero(alignResult.dof,
                                                  alignResult.dof);
+    // Copy the fit options
+    fit_options_t fitOptionsWithRefSurface = fitOptions;
     // Calculate contribution to chi2 derivatives from all input trajectories
-    for (const auto& [sourcelinks, sParameters] : inputs) {
+    for (unsigned int iTraj = 0; iTraj < trajectoryCollection.size(); iTraj++) {
+      const auto& sourcelinks = trajectoryCollection.at(iTraj);
+      const auto& sParameters = startParametersCollection.at(iTraj);
+      // Set the target surface
+      fitOptionsWithRefSurface.referenceSurface =
+          &sParameters.referenceSurface();
       // The result for one single track
-      auto evaluateRes = evaluateTrackAlignmentState(
-          sourcelinks, sParameters, fitOptions, idxedAlignSurfaces);
+      auto evaluateRes = evaluateTrackAlignmentState(sourcelinks, sParameters,
+                                                     fitOptionsWithRefSurface,
+                                                     idxedAlignSurfaces);
       if (evaluateRes.ok()) {
         const auto& alignState = evaluateRes.value();
-        for (const auto& [rowSurface, [ dstRow, srcRow ]] :
-             alignState.alignedSurfaces) {
+        for (const auto& [rowSurface, rows] : alignState.alignedSurfaces) {
+          const auto& [dstRow, srcRow] = rows;
           // Fill the results into full chi2 derivative matrixs
-          sumChi2Derivative.segment<eAlignmentParameters>(
-              dstRow * eAlignmentParameters) +=
-              alignState.alignmentToChi2Derivative
-                  .segment<eAlignmentParameters>(srcRow * eAlignmentParameters);
+          sumChi2Derivative.segment<eAlignmentParametersSize>(
+              dstRow * eAlignmentParametersSize) +=
+              alignState.alignmentToChi2Derivative.segment(
+                  srcRow * eAlignmentParametersSize, eAlignmentParametersSize);
 
-          for (const auto& [colSurface, [ dstCol, srcCol ]] :
-               alignState.alignedSurfaces) {
+          for (const auto& [colSurface, cols] : alignState.alignedSurfaces) {
+            const auto& [dstCol, srcCol] = cols;
             sumChi2SecondDerivative
-                .block<eAlignmentParameters, eAlignmentParameters>(
-                    dstRow * eAlignmentParameters,
-                    dstCol * eAlignmentParameters) +=
-                alignState.alignmentToChi2SecondDerivative
-                    .block<eAlignmentParameters, eAlignmentParameters>(
-                        srcRow * eAlignmentParameters,
-                        srcCol * eAlignmentParameters);
+                .block<eAlignmentParametersSize, eAlignmentParametersSize>(
+                    dstRow * eAlignmentParametersSize,
+                    dstCol * eAlignmentParametersSize) +=
+                alignState.alignmentToChi2SecondDerivative.block(
+                    srcRow * eAlignmentParametersSize,
+                    srcCol * eAlignmentParametersSize, eAlignmentParametersSize,
+                    eAlignmentParametersSize);
           }
         }
       }
     }
     // Check if the chi2 second derivative matrix inverse is valid
     if (sumChi2SecondDerivative.inverse().hasNaN()) {
+      ACTS_ERROR("Chi2 second derivative has NaN");
       return AlignmentError::AlignmentParametersUpdateFailure;
     }
 
@@ -180,8 +224,8 @@ struct Alignment {
     // Alignment parameters covariance
     alignResult.alignmentCovariance = 2 * sumChi2SecondDerivative.inverse();
     // chi2 change
-    alignResult.deltaChi2 =
-        0.5 * sumChi2Derivative.transpose() * deltaAlignmentParameters;
+    alignResult.deltaChi2 = 0.5 * sumChi2Derivative.transpose() *
+                            alignResult.deltaAlignmentParameters;
 
     // @Todo: the change of alignment parameters should be passed back to the
     // aligned surfaces
@@ -191,24 +235,23 @@ struct Alignment {
 
   /// @brief Alignment implementation
   ///
-  // @tparam source_link_t Source link type identifying uncalibrated input
-  /// measurements.
-  /// @tparam start_parameters_t Type of the initial parameters
-  /// @tparam fitter_options_t Type of the kalman fitter options
+  /// @tparam trajectory_container_t The trajectories container type
+  /// @tparam start_parameters_t The initial parameters container type
+  /// @tparam fit_options_t The fit options type
   ///
-  /// @param inputs The pair of input source links and initial track parameters
-  /// used to run fitting for one trajectory
-  /// @param fitOptions KalmanOptions steering the fit
-  /// @param alignOptions AlignmentOptions steering the alignment
+  /// @param trajectoryCollection The collection of trajectories as input of
+  /// fitting
+  /// @param startParametersCollection The collection of starting parameters as
+  /// input of fitting
+  /// @param alignOptions The alignment options
   ///
-  /// @param result The alignment result
-  template <typename source_link_t, typename start_parameters_t,
-            typename fitter_options_t>
-  Result<AlignmentResult> alignment(
-      const std::vector<std::pair<const std::vector<source_link_t>,
-                                  const start_parameters_t>>& inputs,
-      const fitter_options_t& fitOptions,
-      const AlignmentOptions& alignOptions) const {
+  /// @result The alignment result
+  template <typename trajectory_container_t,
+            typename start_parameters_container_t, typename fit_options_t>
+  Result<AlignmentResult> align(
+      const trajectory_container_t& trajectoryCollection,
+      const start_parameters_container_t& startParametersCollection,
+      const AlignmentOptions<fit_options_t>& alignOptions) const {
     // Construct an AlignmentResult object
     AlignmentResult alignRes;
 
@@ -223,19 +266,25 @@ struct Alignment {
     // Start the iteration to minimize the chi2
     bool converged = false;
     for (unsigned int iIter = 0; iIter < alignOptions.maxIterations; iIter++) {
-      auto updateRes = updateAlignmentParameters(inputs, fitOptions,
-                                                 idxedAlignSurfaces, alignRes);
+      // Perform the fit to the trajectories and update alignment parameters
+      auto updateRes = updateAlignmentParameters(
+          trajectoryCollection, startParametersCollection,
+          alignOptions.fitOptions, idxedAlignSurfaces, alignRes);
       if (not updateRes.ok()) {
+        ACTS_ERROR("Update alignment parameters failed: " << updateRes.error());
         return updateRes.error();
       }
+      ACTS_VERBOSE("iIter = " << iIter
+                              << ", deltaChi2 = " << alignRes.deltaChi2);
       // Check if it has converged against the provided precision
-      if (alignRes.detalChi2 <= alignOptions.deltaChi2CutOff) {
+      if (alignRes.deltaChi2 <= alignOptions.deltaChi2CutOff) {
         converged = true;
         break;
       }
     }
     // Alignment failure if not converged
     if (not converged) {
+      ACTS_ERROR("Alignment is not converged.");
       alignRes.result = AlignmentError::ConvergeFailure;
     }
 
