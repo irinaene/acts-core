@@ -12,7 +12,7 @@
 
 #include "Acts/Alignment/AlignmentError.hpp"
 #include "Acts/Alignment/detail/AlignmentEngine.hpp"
-
+#include "Acts/Fitter/detail/KalmanGlobalCovariance.hpp"
 #include "Acts/Surfaces/Surface.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 #include "Acts/Utilities/Logger.hpp"
@@ -95,7 +95,7 @@ struct Alignment {
     // The fit results
     const auto& fitOutput = fitRes.value();
     // Calculate the global track parameters covariance with the fitted track
-    const auto& globalTrackParamsCov = detail::globalTrackParametersCov(
+    const auto& globalTrackParamsCov = detail::globalTrackParametersCovariance(
         fitOutput.fittedStates, fitOutput.trackTip);
     // Calculate the alignment state
     const auto alignState =
