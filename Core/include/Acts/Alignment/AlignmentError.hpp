@@ -16,7 +16,8 @@ namespace Acts {
 // This is the custom error code enum
 enum class AlignmentError {
   NoAlignmentDofOnTrack = 1,
-  AlignmentParameterUpdateFailure = 2
+  AlignmentParametersUpdateFailure = 2,
+  ConvergeFailure = 3
 };
 
 namespace detail {
@@ -30,7 +31,7 @@ class AlignmentErrorCategory : public std::error_category {
     switch (static_cast<AlignmentError>(c)) {
       case AlignmentError::NoAlignmentDofOnTrack:
         return "No alignment parameters on the track";
-      case AlignmentError::AlignmentParameterUpdateFailure:
+      case AlignmentError::AlignmentParametersUpdateFailure:
         return "Update to alignment parameters failure";
       case AlignmentError::ConvergeFailure:
         return "The alignment is not converged";
