@@ -19,11 +19,19 @@
 
 namespace Acts {
 namespace detail {
-
 ///
 ///@brief struct to store info needed for track-based alignment
 ///
 struct TrackAlignmentState {
+  // The dimension of measurements
+  size_t measurementDim = 0;
+
+  // The dimension of track parameters
+  size_t trackParametersDim = 0;
+
+  // The contributed alignment degree of freedom
+  size_t alignmentDof = 0;
+
   // The measurements covariance
   ActsMatrixX<ParValue_t> measurementCovariance;
 
@@ -54,15 +62,6 @@ struct TrackAlignmentState {
   // The alignable surfaces on the track and their indices in both the global
   // alignable surfaces pool and those relevant with this track
   std::unordered_map<const Surface*, std::pair<size_t, size_t>> alignedSurfaces;
-
-  // The dimension of measurements
-  size_t measurementDim = 0;
-
-  // The dimension of track parameters
-  size_t trackParametersDim = 0;
-
-  // The contributed alignment degree of freedom
-  size_t alignmentDof = 0;
 };
 
 ///
@@ -95,7 +94,7 @@ TrackAlignmentState trackAlignmentState(
     const std::pair<ActsMatrixX<BoundParametersScalar>,
                     std::unordered_map<size_t, size_t>>& globalTrackParamsCov,
     const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces) {
-  using CovMatrix_t = typename parameters_t::CovMatrix_t;
+  using CovMatrix = typename parameters_t::CovMatrix_t;
 
   // Construct an alignment state
   TrackAlignmentState alignState;
@@ -151,9 +150,8 @@ TrackAlignmentState trackAlignmentState(
   // Initialize the alignment matrixs with components from the measurement
   // states
   // The measurement covariance
-  alignState.measurementCovariance =
-      ActsMatrixX << ParValue_t >
-      ::Zero(alignState.measurementDim, alignState.measurementDim);
+  alignState.measurementCovariance = ActsMatrixX<ParValue_t>::Zero(
+      alignState.measurementDim, alignState.measurementDim);
   // The bound parameters to measurement projection matrix
   alignState.projectionMatrix = ActsMatrixX<BoundParametersScalar>::Zero(
       alignState.measurementDim, alignState.trackParametersDim);
@@ -184,26 +182,25 @@ TrackAlignmentState trackAlignmentState(
   size_t iSurface = nAlignSurfaces;
   for (const auto& [rowStateIndex, isAlignable] : measurementStates) {
     const auto& state = multiTraj.getTrackState(rowStateIndex);
-    size_t measdim = state.calibratedSize();
+    const size_t measdim = state.calibratedSize();
     // Update index of current measurement and parameter
     iMeasurement -= measdim;
     iParams -= eBoundParametersSize;
     // (a) Get and fill the measurement covariance matrix
-    ActsSymMatrixD<measdim> measCovariance =
-        state.calibratedCovariance().template topLeftCorner<measdim, measdim>();
-    alignState.measurementCovariance.block<measdim, measdim>(
-        iMeasurement, iMeasurement) = measCovariance;
+    const ActsMatrixX<ParValue_t> measCovariance =
+        state.calibratedCovariance().template topLeftCorner(measdim, measdim);
+    alignState.measurementCovariance.block(iMeasurement, iMeasurement, measdim,
+                                           measdim) = measCovariance;
 
     // (b) Get and fill the bound parameters to measurement projection matrix
-    const ActsMatrixD<measdim, eBoundParametersSize> H =
-        state.projector()
-            .template topLeftCorner<measdim, eBoundParametersSize>();
-    alignState.projectionMatrix.block<measdim, eBoundParametersSize>(
-        iMeasurement, iParams) = H;
+    const ActsMatrixX<BoundParametersScalar> H =
+        state.projector().template topLeftCorner(measdim, eBoundParametersSize);
+    alignState.projectionMatrix.block(iMeasurement, iParams, measdim,
+                                      eBoundParametersSize) = H;
 
     // (c) Get and fill the residual
-    alignState.residual.segment<measdim>(iMeasurement) =
-        state.calibrated().template head<meas>() - H * state.filtered();
+    alignState.residual.segment(iMeasurement, measdim) =
+        state.calibrated().template head(measdim) - H * state.filtered();
 
     // (d) @Todo: Get the derivative of alignment parameters w.r.t. measurement
     // or residual
@@ -220,13 +217,12 @@ TrackAlignmentState trackAlignmentState(
          iColState++) {
       size_t colStateIndex = measurementStates.at(iColState).first;
       // Retrieve the block from the source covariance matrix
-      CovMatrix_t correlation =
-          sourceTrackParamsCov
-              .block<eBoundParametersSize, eBoundParametersSize>(
-                  stateRowIndices.at(rowStateIndex),
-                  stateRowIndices.at(colStateIndex));
+      CovMatrix correlation = sourceTrackParamsCov.block<eBoundParametersSize,
+                                                         eBoundParametersSize>(
+          stateRowIndices.at(rowStateIndex), stateRowIndices.at(colStateIndex));
       // Fill the block of the target covariance matrix
-      size_t iCol = trackParametersDim - (iColState + 1) * eBoundParametersSize;
+      size_t iCol = alignState.trackParametersDim -
+                    (iColState + 1) * eBoundParametersSize;
       alignState.trackParametersCovariance
           .block<eBoundParametersSize, eBoundParametersSize>(iParams, iCol) =
           correlation;
