@@ -104,6 +104,7 @@ struct Alignment {
   /// @tparam start_parameters_t Type of the initial parameters
   /// @tparam fit_options_t The fit options type
   ///
+  /// @param gctx The current geometry context object
   /// @param sourcelinks The fittable uncalibrated measurements
   /// @param sParameters The initial track parameters
   /// @param fitOptions The fit Options steering the fit
@@ -113,6 +114,7 @@ struct Alignment {
   template <typename source_link_t, typename start_parameters_t,
             typename fit_options_t>
   Result<detail::TrackAlignmentState> evaluateTrackAlignmentState(
+      const GeometryContext& gctx,
       const std::vector<source_link_t>& sourcelinks,
       const start_parameters_t& sParameters, const fit_options_t& fitOptions,
       const std::unordered_map<const Surface*, size_t>& idxedAlignSurfaces)
@@ -128,9 +130,9 @@ struct Alignment {
     const auto& globalTrackParamsCov = detail::globalTrackParametersCovariance(
         fitOutput.fittedStates, fitOutput.trackTip);
     // Calculate the alignment state
-    const auto alignState =
-        detail::trackAlignmentState(fitOutput.fittedStates, fitOutput.trackTip,
-                                    globalTrackParamsCov, idxedAlignSurfaces);
+    const auto alignState = detail::trackAlignmentState(
+        gctx, fitOutput.fittedStates, fitOutput.trackTip, globalTrackParamsCov,
+        idxedAlignSurfaces);
     if (alignState.alignmentDof == 0) {
       return AlignmentError::NoAlignmentDofOnTrack;
     }
@@ -180,9 +182,9 @@ struct Alignment {
       fitOptionsWithRefSurface.referenceSurface =
           &sParameters.referenceSurface();
       // The result for one single track
-      auto evaluateRes = evaluateTrackAlignmentState(sourcelinks, sParameters,
-                                                     fitOptionsWithRefSurface,
-                                                     idxedAlignSurfaces);
+      auto evaluateRes = evaluateTrackAlignmentState(
+          fitOptions.geoContext, sourcelinks, sParameters,
+          fitOptionsWithRefSurface, idxedAlignSurfaces);
       if (evaluateRes.ok()) {
         const auto& alignState = evaluateRes.value();
         for (const auto& [rowSurface, rows] : alignState.alignedSurfaces) {
