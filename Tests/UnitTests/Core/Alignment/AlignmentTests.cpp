@@ -360,8 +360,8 @@ BOOST_AUTO_TEST_CASE(Alignment_zero_field) {
   const auto& inputTraj = trajectories.front();
   kfOptions.referenceSurface = &(*inputTraj.startParameters).referenceSurface();
   auto evaluateRes = alignment.evaluateTrackAlignmentState(
-      inputTraj.sourcelinks, *inputTraj.startParameters, kfOptions,
-      alignSurfaces);
+      kfOptions.geoContext, inputTraj.sourcelinks, *inputTraj.startParameters,
+      kfOptions, alignSurfaces);
   BOOST_CHECK(evaluateRes.ok());
   const auto& alignState = evaluateRes.value();
   std::cout << "Chi2/dof = " << alignState.chi2 / alignState.alignmentDof
@@ -393,6 +393,9 @@ BOOST_AUTO_TEST_CASE(Alignment_zero_field) {
   BOOST_CHECK_EQUAL(alignState.residual.size(), 12);
   // Check the residual covariance
   BOOST_CHECK_EQUAL(alignState.residualCovariance.rows(), 12);
+  // Check the alignment to residual derivative
+  BOOST_CHECK_EQUAL(alignState.alignmentToResidualDerivative.rows(), 12);
+  BOOST_CHECK_EQUAL(alignState.alignmentToResidualDerivative.cols(), 30);
   // Check the chi2 derivative
   BOOST_CHECK_EQUAL(alignState.alignmentToChi2Derivative.size(), 30);
   BOOST_CHECK_EQUAL(alignState.alignmentToChi2SecondDerivative.rows(), 30);

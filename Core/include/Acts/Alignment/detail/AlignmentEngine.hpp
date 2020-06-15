@@ -77,6 +77,7 @@ struct TrackAlignmentState {
 /// @tparam source_link_t The source link type of the trajectory
 /// @tparam parameters_t The track parameters type
 ///
+/// @param gctx The current geometry context object
 /// @param multiTraj The MultiTrajectory containing the trajectory to be
 /// investigated
 /// @param entryIndex The trajectory entry index
@@ -90,6 +91,7 @@ struct TrackAlignmentState {
 /// ingredients
 template <typename source_link_t, typename parameters_t = BoundParameters>
 TrackAlignmentState trackAlignmentState(
+    const GeometryContext& gctx,
     const MultiTrajectory<source_link_t>& multiTraj, const size_t& entryIndex,
     const std::pair<ActsMatrixX<BoundParametersScalar>,
                     std::unordered_map<size_t, size_t>>& globalTrackParamsCov,
@@ -208,6 +210,18 @@ TrackAlignmentState trackAlignmentState(
       iSurface -= 1;
       const auto surface = &state.referenceSurface();
       alignState.alignedSurfaces.at(surface).second = iSurface;
+      const BoundParameters& smoothedParams = state.smoothedParameters(gctx);
+      Vector3D position = smoothedParams.position();
+      Vector3D momentum = smoothedParams.momentum();
+      // @Todo: How to get the derivative from stepper?
+      FreeVector pathToFree = FreeVector::Zero();
+      pathToFree.segment<3>(0) = momentum;
+      const AlignmentToBoundMatrix alignToBound =
+          surface->alignmentToBoundDerivative(gctx, pathToFree, position,
+                                              momentum.normalized());
+      alignState.alignmentToResidualDerivative.block(
+          iMeasurement, iSurface * eAlignmentParametersSize, measdim,
+          eAlignmentParametersSize) = H * alignToBound;
     }
 
     // (e) Extract and fill the track parameters covariance matrix for only
