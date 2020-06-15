@@ -6,7 +6,8 @@ add_library(
   src/CsvParticleWriter.cpp
   src/CsvPlanarClusterReader.cpp
   src/CsvPlanarClusterWriter.cpp
-  src/CsvTrackingGeometryWriter.cpp)
+  src/CsvTrackingGeometryWriter.cpp
+  src/CsvMultiTrajectoryWriter.cpp)
 target_include_directories(
   ActsExamplesIoCsv
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)

@@ -14,6 +14,7 @@
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/GenericDetector/GenericDetector.hpp"
 #include "ACTFW/Geometry/CommonGeometry.hpp"
+#include "ACTFW/Io/Csv/CsvMultiTrajectoryWriter.hpp"
 #include "ACTFW/Io/Csv/CsvOptionsReader.hpp"
 #include "ACTFW/Io/Csv/CsvParticleReader.hpp"
 #include "ACTFW/Io/Csv/CsvPlanarClusterReader.hpp"
@@ -151,6 +152,15 @@ int main(int argc, char* argv[]) {
   perfWriterCfg.outputDir = outputDir;
   sequencer.addWriter(
       std::make_shared<CKFPerformanceWriter>(perfWriterCfg, logLevel));
+
+  if (vm["output-csv"].template as<bool>()) {
+    // Write the CKF track as Csv
+    Csv::CsvMultiTrajectoryWriter::Config trackWriterCsvConfig;
+    trackWriterCsvConfig.inputTrajectories = trackFindingCfg.outputTrajectories;
+    trackWriterCsvConfig.outputDir = outputDir;
+    sequencer.addWriter(std::make_shared<Csv::CsvMultiTrajectoryWriter>(
+        trackWriterCsvConfig, logLevel));
+  }
 
   return sequencer.run();
 }

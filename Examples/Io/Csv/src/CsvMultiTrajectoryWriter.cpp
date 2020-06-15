@@ -90,7 +90,7 @@ FW::ProcessCode FW::Csv::CsvMultiTrajectoryWriter::writeT(
       os << trajState.nMeasurements << ",";
       os << trajState.nOutliers << ",";
       os << trajState.nHoles << ",";
-      os << trajState.chi2Sum / trajState.NDF << ",";
+      os << trajState.chi2Sum * 1.0 / trajState.NDF << ",";
       os << nMajorityHits / trajState.nMeasurements << ",";
 
       os << '\n';
