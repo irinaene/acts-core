@@ -374,6 +374,9 @@ BOOST_AUTO_TEST_CASE(kalman_fitter_zero_field) {
 
   KalmanFitterOptions<MinimalOutlierFinder> kfOptions(
       tgContext, mfContext, calContext, outlierFinder, rSurface);
+  // Rescale the covariance matrix when entering strip detector with volume id =
+  // 3
+  kfOptions.covarianceScaleFactors = {{3, 1.5}};
 
   // Fit the track
   auto fitRes = kFitter.fit(sourcelinks, rStart, kfOptions);

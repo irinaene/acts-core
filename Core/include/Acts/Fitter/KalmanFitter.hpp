@@ -64,13 +64,13 @@ struct KalmanFitterOptions {
   /// @param mScattering Whether to include multiple scattering
   /// @param eLoss Whether to include energy loss
   /// @param bwdFiltering Whether to run backward filtering as smoothing
-  KalmanFitterOptions(std::reference_wrapper<const GeometryContext> gctx,
-                      std::reference_wrapper<const MagneticFieldContext> mctx,
-                      std::reference_wrapper<const CalibrationContext> cctx,
-                      const OutlierFinder& outlierFinder,
-                      const Surface* rSurface = nullptr,
-                      bool mScattering = true, bool eLoss = true,
-                      bool bwdFiltering = false)
+  KalmanFitterOptions(
+      std::reference_wrapper<const GeometryContext> gctx,
+      std::reference_wrapper<const MagneticFieldContext> mctx,
+      std::reference_wrapper<const CalibrationContext> cctx,
+      const OutlierFinder& outlierFinder, const Surface* rSurface = nullptr,
+      bool mScattering = true, bool eLoss = true, bool bwdFiltering = false,
+      const std::unordered_map<size_t, double>& CovScaleFactors = {})
       : geoContext(gctx),
         magFieldContext(mctx),
         calibrationContext(cctx),
@@ -78,7 +78,8 @@ struct KalmanFitterOptions {
         referenceSurface(rSurface),
         multipleScattering(mScattering),
         energyLoss(eLoss),
-        backwardFiltering(bwdFiltering) {}
+        backwardFiltering(bwdFiltering),
+        covarianceScaleFactors(CovScaleFactors) {}
 
   /// Context object for the geometry
   std::reference_wrapper<const GeometryContext> geoContext;
@@ -101,6 +102,9 @@ struct KalmanFitterOptions {
 
   /// Whether to run backward filtering
   bool backwardFiltering = false;
+
+  /// Volume entry covariance re-scaling factors
+  std::unordered_map<size_t, double> covarianceScaleFactors;
 };
 
 template <typename source_link_t>
@@ -142,6 +146,9 @@ struct KalmanFitterResult {
 
   // Measurement surfaces handled in both forward and backward filtering
   std::vector<const Surface*> passedAgainSurfaces;
+
+  // Remember if the specific volume entry covariance has been scaled
+  std::vector<GeometryID::Value> covarianceScaled;
 
   Result<void> result{Result<void>::success()};
 };
@@ -270,6 +277,9 @@ class KalmanFitter {
 
     /// Whether run smoothing as backward filtering
     bool backwardFiltering = false;
+
+    /// Volume entry covariance re-scaling factors
+    std::unordered_map<size_t, double> covarianceScaleFactors;
 
     /// @brief Kalman actor operation
     ///
@@ -525,9 +535,26 @@ class KalmanFitter {
         // assign the source link to the track state
         trackStateProxy.uncalibrated() = sourcelink_it->second;
 
+        double covScaleFactor = 1.0;
+        const auto& volume = surface->geoID().volume();
+        auto scale_it = covarianceScaleFactors.find(volume);
+        if (scale_it != covarianceScaleFactors.end()) {
+          auto status_it = std::find(result.covarianceScaled.begin(),
+                                     result.covarianceScaled.end(), volume);
+          if (status_it == result.covarianceScaled.end()) {
+            ACTS_WARNING(
+                "Starting track parameters covariance for volume is scaled by "
+                "a factor of "
+                << scale_it->second);
+            result.covarianceScaled.push_back(volume);
+            covScaleFactor = scale_it->second;
+          }
+        }
+
         // Fill the track state
         trackStateProxy.predicted() = boundParams.parameters();
-        trackStateProxy.predictedCovariance() = *boundParams.covariance();
+        trackStateProxy.predictedCovariance() =
+            *boundParams.covariance() * covScaleFactor;
         trackStateProxy.jacobian() = jacobian;
         trackStateProxy.pathLength() = pathLength;
 
@@ -1004,6 +1031,7 @@ class KalmanFitter {
     kalmanActor.multipleScattering = kfOptions.multipleScattering;
     kalmanActor.energyLoss = kfOptions.energyLoss;
     kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
+    kalmanActor.covarianceScaleFactors = kfOptions.covarianceScaleFactors;
 
     // Set config for outlier finder
     kalmanActor.m_outlierFinder = kfOptions.outlierFinder;
@@ -1105,6 +1133,7 @@ class KalmanFitter {
     kalmanActor.multipleScattering = kfOptions.multipleScattering;
     kalmanActor.energyLoss = kfOptions.energyLoss;
     kalmanActor.backwardFiltering = kfOptions.backwardFiltering;
+    kalmanActor.covarianceScaleFactors = kfOptions.covarianceScaleFactors;
 
     // Set config for outlier finder
     kalmanActor.m_outlierFinder.m_config = kfOptions.outlierFinderConfig;
