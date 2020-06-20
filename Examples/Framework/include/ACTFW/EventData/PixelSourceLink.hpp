@@ -21,9 +21,9 @@ namespace FW {
 ///
 class PixelSourceLink {
  public:
-  PixelSourceLink(const Acts::Surface& surface, size_t dim,
-                  Acts::Vector2D values, Acts::ActsSymMatrixD<2> cov)
-      : m_values(values), m_cov(cov), m_dim(dim), m_surface(&surface) {}
+  PixelSourceLink(const Acts::Surface& surface, Acts::Vector2D values,
+                  Acts::ActsSymMatrixD<2> cov)
+      : m_values(values), m_cov(cov), m_surface(&surface) {}
   /// Must be default_constructible to satisfy SourceLinkConcept.
   PixelSourceLink() = default;
   PixelSourceLink(PixelSourceLink&&) = default;
@@ -34,10 +34,6 @@ class PixelSourceLink {
   constexpr const Acts::Surface& referenceSurface() const { return *m_surface; }
 
   Acts::FittableMeasurement<PixelSourceLink> operator*() const {
-    if (m_dim != 2) {
-      throw std::runtime_error("Dim " + std::to_string(m_dim) +
-                               " currently not supported.");
-    }
     return Acts::Measurement<PixelSourceLink, Acts::ParDef::eLOC_0,
                              Acts::ParDef::eLOC_1>{
         m_surface->getSharedPtr(), *this, m_cov, m_values[0], m_values[1]};
@@ -46,7 +42,6 @@ class PixelSourceLink {
  private:
   Acts::Vector2D m_values;
   Acts::ActsSymMatrixD<2> m_cov;
-  size_t m_dim = 0u;
   // need to store pointers to make the object copyable
   const Acts::Surface* m_surface;
   friend bool operator==(const PixelSourceLink& lhs,

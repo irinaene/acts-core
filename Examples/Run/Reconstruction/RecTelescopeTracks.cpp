@@ -26,60 +26,77 @@ using namespace Acts::UnitLiterals;
 using namespace FW;
 
 ///
+/// Struct for 2D hit
+///
+struct PixelHit {
+  // The correspoinding hit index
+  size_t surfaceIndex = 0;
+
+  // The local x coordinate
+  double locX = 0;
+
+  // The local y cooridnate
+  double locY = 0;
+};
+
+///
 /// Function to read in one raw track
 ///
-std::vector<std::pair<double, double>> readTrack(const std::string& fileName,
-                                                 size_t itrack) {
-  // One element in the vector represent a hit in the track
-  std::vector<std::pair<double, double>> protoTrack;
+std::vector<PixelHit> readTrack(const std::string& fileName, size_t itrack) {
+  // One element in the vector represent a 2D hit on the track
+  std::vector<PixelHit> track;
 
-  return protoTrack;
+  return track;
 }
 
 ///
-/// @brief Struct to create the source link tracks
+/// @brief Struct to read and create the source link tracks
 ///
-struct SourceLinkTrackCreator {
+struct TelescopeTrackReader {
   /// The detector resolution
   std::array<double, 2> resolution = {5_um, 5_um};
 
   /// The ordered detector surfaces
-  std::vector<const Acts::Surface*> surfaces;
+  std::vector<const Acts::Surface*> detectorSurfaces;
 
   /// @param fileName The input file with one line representing one raw track
   /// @param nTracks The number of tracks to process
+  ///
   /// @return The created source link tracks
   std::vector<std::vector<PixelSourceLink>> operator()(
       const std::string& fileName, size_t nTracks) const {
+    // Create a container for the output tracks
     std::vector<std::vector<PixelSourceLink>> trajectories;
     trajectories.reserve(nTracks);
+
+    // Read in the tracks
     for (unsigned int itrack = 0; itrack < nTracks; itrack++) {
-      if (itrack % 10 == 0) {
-        std::cout << "Processing track: " << itrack << "..." << std::endl;
+      if (itrack % 100 == 0) {
+        std::cout << "Reading in track: " << itrack << "..." << std::endl;
       }
 
       // @Todo: call the file reader to read in one raw track
-      std::vector<std::pair<double, double>> hitLocals =
-          readTrack(fileName, itrack);
+      std::vector<PixelHit> hitLocals = readTrack(fileName, itrack);
 
-      assert(hitLocals.size() == 6);
+      // The number of hits should be less or equal to number of provided
+      // surfaces
+      assert(hitLocals.size() <= detectorSurfaces.size());
 
-      // setup local covariance
+      // Setup local covariance
       Acts::ActsSymMatrixD<2> cov2D;
       cov2D << resolution[0] * resolution[0], 0., 0.,
           resolution[1] * resolution[1];
 
       // Create the track sourcelinks
       std::vector<PixelSourceLink> sourcelinks;
-      sourcelinks.reserve(6);
-      for (unsigned int iSurface = 0; iSurface < hitLocals.size(); iSurface++) {
+      sourcelinks.reserve(hitLocals.size());
+      for (const auto& hit : hitLocals) {
         Acts::Vector2D loc;
-        const auto& [locx, locy] = hitLocals.at(iSurface);
-        loc << locx, locy;
+        loc << hit.locX, hit.locY;
         // push a hit
-        sourcelinks.emplace_back(*surfaces.at(iSurface), 2, loc, cov2D);
+        sourcelinks.emplace_back(*detectorSurfaces.at(hit.surfaceIndex), loc,
+                                 cov2D);
       }
-
       // push the sourcelinks into the trajectory container
       trajectories.push_back(sourcelinks);
     }
@@ -135,14 +152,14 @@ int main(int argc, char* argv[]) {
   });
   std::cout << "There are " << surfaces.size() << " surfaces" << std::endl;
 
-  // The source link track creator
-  SourceLinkTrackCreator trackCreator;
-  trackCreator.surfaces = surfaces;
+  // The source link tracks reader
+  TelescopeTrackReader trackReader;
+  trackReader.detectorSurfaces = surfaces;
 
   // setup the fitter
   TelescopeTrackingAlgorithm::Config fitter;
   fitter.inputFileName = "data.csv";
-  fitter.tracksReader = trackCreator;
+  fitter.trackReader = trackReader;
   fitter.outputTrajectories = "trajectories";
   fitter.randomNumbers = rnd;
   fitter.fit = TelescopeTrackingAlgorithm::makeFitterFunction(

@@ -36,7 +36,7 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
 
   // Read input data
   const std::vector<SourceLinkTrack> sourcelinkTracks =
-      m_cfg.tracksReader(m_cfg.inputFileName, m_cfg.nTracks);
+      m_cfg.trackReader(m_cfg.inputFileName, m_cfg.nTracks);
 
   // Prepare the output data with MultiTrajectory
   std::vector<PixelMultiTrajectory> trajectories;

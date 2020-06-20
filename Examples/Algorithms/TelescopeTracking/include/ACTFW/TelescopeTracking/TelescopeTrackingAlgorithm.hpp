@@ -32,7 +32,7 @@ class TelescopeTrackingAlgorithm final : public BareAlgorithm {
       const std::vector<PixelSourceLink>&, const TrackParameters&,
       const Acts::KalmanFitterOptions<Acts::VoidOutlierFinder>&)>;
   using SourceLinkTrack = std::vector<PixelSourceLink>;
-  using SourceLinkTracksReader =
+  using SourceLinkTrackReader =
       std::function<std::vector<SourceLinkTrack>(const std::string&, size_t)>;
 
   /// Create the fitter function implementation.
@@ -47,7 +47,7 @@ class TelescopeTrackingAlgorithm final : public BareAlgorithm {
     /// Input data file name.
     std::string inputFileName;
     /// Input data reader
-    SourceLinkTracksReader tracksReader;
+    SourceLinkTrackReader trackReader;
     /// Number of tracks
     size_t nTracks = 1000;
     /// Output fitted trajectories collection.
