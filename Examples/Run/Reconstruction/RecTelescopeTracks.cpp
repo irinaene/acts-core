@@ -10,9 +10,10 @@
 
 #include "ACTFW/EventData/PixelMultiTrajectory.hpp"
 #include "ACTFW/EventData/PixelSourceLink.hpp"
-#include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/BareAlgorithm.hpp"
+#include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
+#include "ACTFW/Utilities/Paths.hpp"
 #include "Acts/Fitter/KalmanFitter.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
 
@@ -54,7 +55,7 @@ using namespace Acts::UnitLiterals;
 using SourceLink = FW::PixelSourceLink;
 using Covariance = Acts::BoundSymMatrix;
 
-template <ParID_t... params>
+template <Acts::ParID_t... params>
 using MeasurementType = Acts::Measurement<SourceLink, params...>;
 
 ///
@@ -236,7 +237,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  algCtx.eventStore.add(outputTrajectories);
+  algCtx.eventStore.add("tracks", std::move(outputTrajectories));
 
   // write reconstruction performance data
   //  TrackFinderPerformanceWriter::Config perfFinder;

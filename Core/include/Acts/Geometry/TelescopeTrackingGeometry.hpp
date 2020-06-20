@@ -135,7 +135,7 @@ struct TelescopeTrackingGeometry {
         });
     TrackingGeometryBuilder tgb(tgbCfg);
     std::shared_ptr<const TrackingGeometry> detector =
-        tgb.trackingGeometry(tgContext);
+        tgb.trackingGeometry(geoContext);
 
     // Build and return tracking geometry
     return detector;

@@ -44,14 +44,15 @@ class PixelSourceLink {
   }
 
  private:
-  Acts::BoundVector m_values;
-  Acts::BoundMatrix m_cov;
+  Acts::Vector2D m_values;
+  Acts::ActsSymMatrixD<2> m_cov;
   size_t m_dim = 0u;
   // need to store pointers to make the object copyable
   const Acts::Surface* m_surface;
-  friend constexpr bool operator==(const PixelSourceLink& lhs,
-                                   const PixelSourceLink& rhs) {
-    return lhs.m_values == rhs.m_values;
+  friend bool operator==(const PixelSourceLink& lhs,
+                         const PixelSourceLink& rhs) {
+    return lhs.m_values.isApprox(rhs.m_values) and
+           lhs.m_cov.isApprox(rhs.m_cov);
   }
 };
 
