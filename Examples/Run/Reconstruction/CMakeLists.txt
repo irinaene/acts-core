@@ -39,3 +39,24 @@ install(
   ActsRecCKFTracks
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+
+
+add_executable(
+    ActsRecTelescopeTracks
+    RecTelescopeTracks.cpp)
+target_link_libraries(
+    ActsRecTelescopeTracks
+    PRIVATE
+    ActsExamplesFramework
+    ActsExamplesCommon
+    ActsExamplesDigitization
+    ActsExamplesTrackFinding
+    ActsExamplesDetectorGeneric
+    ActsExamplesMagneticField
+    ActsExamplesIoCsv
+    ActsExamplesIoPerformance)
+
+install(
+  TARGETS
+  ActsRecTelescopeTracks
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
