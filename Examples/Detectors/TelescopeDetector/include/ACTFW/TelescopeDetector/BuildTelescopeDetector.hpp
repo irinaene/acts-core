@@ -67,24 +67,24 @@ std::unique_ptr<const Acts::TrackingGeometry> buildDetector(
   rotation.col(1) = yPos;
   rotation.col(2) = zPos;
 
-  // Boundaries of the surfaces (ALPIDE SIZE: 13.76256 mm * 30.81896 mm)
+  // Boundaries of the surfaces (ALPIDE SIZE: 30.81896 * 13.76256_mm)
   const auto rBounds = std::make_shared<const Acts::RectangleBounds>(
-      Acts::RectangleBounds(13.76256_mm, 30.81896_mm));
+      Acts::RectangleBounds(30.81896_mm, 13.76256_mm));
 
   // Material of the surfaces
-  Acts::MaterialProperties matProp(95.7, 465.2, 28.03, 14., 2.32e-3, 0.5_mm);
+  Acts::MaterialProperties matProp(95.7, 465.2, 28.03, 14., 2.32e-3, 100_um);
   const auto surfaceMaterial =
       std::make_shared<Acts::HomogeneousSurfaceMaterial>(matProp);
 
   // Set translation vectors
   std::vector<Acts::Vector3D> translations;
   translations.reserve(6);
-  translations.push_back({-500_mm, 0., 0.});
-  translations.push_back({-300_mm, 0., 0.});
-  translations.push_back({-100_mm, 0., 0.});
-  translations.push_back({100_mm, 0., 0.});
-  translations.push_back({300_mm, 0., 0.});
-  translations.push_back({500_mm, 0., 0.});
+  translations.push_back({-95_mm, 0., 0.});
+  translations.push_back({-57_mm, 0., 0.});
+  translations.push_back({-19_mm, 0., 0.});
+  translations.push_back({19_mm, 0., 0.});
+  translations.push_back({57_mm, 0., 0.});
+  translations.push_back({95_mm, 0., 0.});
 
   // Construct layer configs
   std::vector<Acts::CuboidVolumeBuilder::LayerConfig> lConfs;

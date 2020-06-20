@@ -13,7 +13,7 @@
 #include "ACTFW/Framework/Sequencer.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/Geometry/CommonGeometry.hpp"
-#include "ACTFW/Io/Performance/TrackFitterPerformanceWriter.hpp"
+#include "ACTFW/Io/Performance/TelescopeTrackingPerformanceWriter.hpp"
 #include "ACTFW/Io/Root/RootTrajectoryWriter.hpp"
 #include "ACTFW/Options/CommonOptions.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
@@ -79,7 +79,7 @@ struct TelescopeTrackReader {
       std::vector<PixelHit> hitLocals = readTrack(fileName, itrack);
 
       // The number of hits should be less or equal to number of provided
-      // surfaces
+      // surfaces?
       assert(hitLocals.size() <= detectorSurfaces.size());
 
       // Setup local covariance
@@ -167,25 +167,12 @@ int main(int argc, char* argv[]) {
   sequencer.addAlgorithm(
       std::make_shared<TelescopeTrackingAlgorithm>(fitter, logLevel));
 
-  /*
-  // write tracks from fitting
-  RootTrajectoryWriter::Config trackWriter;
-  trackWriter.inputParticles = inputParticles;
-  trackWriter.inputTrajectories = fitter.outputTrajectories;
-  trackWriter.outputDir = outputDir;
-  trackWriter.outputFilename = "tracks.root";
-  trackWriter.outputTreename = "tracks";
-  sequencer.addWriter(
-      std::make_shared<RootTrajectoryWriter>(trackWriter, logLevel));
-
   // write reconstruction performance data
-  TrackFitterPerformanceWriter::Config perfFitter;
-  perfFitter.inputParticles = inputParticles;
+  TelescopeTrackingPerformanceWriter::Config perfFitter;
   perfFitter.inputTrajectories = fitter.outputTrajectories;
   perfFitter.outputDir = outputDir;
-  sequencer.addWriter(
-      std::make_shared<TrackFitterPerformanceWriter>(perfFitter, logLevel));
-*/
+  sequencer.addWriter(std::make_shared<TelescopeTrackingPerformanceWriter>(
+      perfFitter, logLevel));
 
   return sequencer.run();
 }
