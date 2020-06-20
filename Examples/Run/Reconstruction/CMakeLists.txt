@@ -49,9 +49,8 @@ target_link_libraries(
     PRIVATE
     ActsExamplesFramework
     ActsExamplesCommon
-    ActsExamplesDigitization
-    ActsExamplesTrackFinding
-    ActsExamplesDetectorGeneric
+    ActsExamplesTelescopeTracking
+    ActsExamplesDetectorTelescope
     ActsExamplesMagneticField
     ActsExamplesIoCsv
     ActsExamplesIoPerformance)
