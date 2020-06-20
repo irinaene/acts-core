@@ -25,6 +25,8 @@
 using namespace Acts::UnitLiterals;
 using namespace FW;
 
+
+#include "rapidjson/myrapidjson.h"
 ///
 /// Function to read in one raw track
 ///
@@ -86,6 +88,11 @@ struct SourceLinkTrackCreator {
     return trajectories;
   }
 };
+
+
+
+
+
 
 int main(int argc, char* argv[]) {
   TelescopeDetector detector;
@@ -171,4 +178,37 @@ int main(int argc, char* argv[]) {
 */
 
   return sequencer.run();
+}
+
+void json_file_reader {
+  
+  std::string datafile_name;
+
+  std::FILE* fp = std::fopen(datafile_name.c_str(), "r");
+  if(!fp) {
+    std::fprintf(stderr, "File opening failed\n");
+  }
+
+  char readBuffer[65536];
+  rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+  rapidjson::Document data;
+  data.ParseStream(is);
+  if(!data.IsArray()){
+    std::frpintf(stderr, "data file is not json array\n");
+    exit(2);
+  }
+  
+  rapidjson::Value::ConstValueIterator ev_it = data.Begin();
+  rapidjson::Value::ConstValueIterator ev_it_end = data.End();
+  while (ev_it != ev_it_end)
+  {    
+    for (auto& subev : ev_it->GetArray()){
+      for (auto& hit : subev["hit_xyz_array"].GetArray()){
+        uint16_t xpix   =  hit[0].GetInt();
+        uint16_t ypix   =  hit[1].GetInt();
+        uint16_t zlayer =  hit[2].GetInt();
+      }
+    }
+    ++ev_it;
+  }
 }
