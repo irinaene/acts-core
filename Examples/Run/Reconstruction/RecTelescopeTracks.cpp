@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
 
   // setup the fitter
   TelescopeTrackingAlgorithm::Config fitter;
-  fitter.inputFileName = "data.csv";
+  fitter.inputFileName = inputDir + "/data.json";
   fitter.trackReader = trackReader;
   fitter.outputTrajectories = "trajectories";
   fitter.randomNumbers = rnd;
