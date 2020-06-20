@@ -13,6 +13,8 @@
 
 #include <vector>
 
+#include "ACTFW/EventData/PixelMultiTrajectory.hpp"
+#include "ACTFW/EventData/PixelSourceLink.hpp"
 #include "ACTFW/EventData/SimMultiTrajectory.hpp"
 #include "ACTFW/EventData/SimSourceLink.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
