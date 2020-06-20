@@ -52,7 +52,7 @@ struct SourceLinkTrackCreator {
   std::vector<std::vector<PixelSourceLink>> operator()(
       const std::string& fileName, size_t nTracks) const {
     std::vector<std::vector<PixelSourceLink>> trajectories;
-    trajectories.reserve(nTrack);
+    trajectories.reserve(nTracks);
     for (unsigned int itrack = 0; itrack < nTracks; itrack++) {
       if (itrack % 10 == 0) {
         std::cout << "Processing track: " << itrack << "..." << std::endl;
