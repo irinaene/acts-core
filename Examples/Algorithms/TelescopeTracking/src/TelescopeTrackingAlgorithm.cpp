@@ -31,7 +31,6 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
   using namespace Acts::UnitLiterals;
 
   // setup random number generator and standard gaussian
-  auto rng = m_cfg.randomNumbers->spawnGenerator(ctx);
   std::normal_distribution<double> stdNormal(0.0, 1.0);
 
   // Read input data
@@ -42,7 +41,10 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
   std::vector<PixelMultiTrajectory> trajectories;
   trajectories.reserve(sourcelinkTracks.size());
 
-  for (std::size_t itrack = 0; itrack < sourcelinkTracks.size(); ++itrack) {
+  // Construct a plane surface centered around (0., 0., 0) and has a normal vector (1., 0., 0.) as the target surface
+  auto pSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(Acts::Vector3D{0.,0.,0.}, Acts::Vector3D{1., 0.,0.});  
+
+  for(std::size_t itrack = 0; itrack < sourcelinkTracks.size(); ++itrack) {
     // The list of hits and the initial start parameters
     const auto& trackSourcelinks = sourcelinkTracks[itrack];
 
@@ -59,17 +61,17 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
         0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0.,
         0., 0.01, 0., 0., 0., 0., 0., 0., 1.;
 
-    Acts::Vector3D rPos(-120_mm, 1_mm * stdNormal(rng), 1_mm * stdNormal(rng));
-    Acts::Vector3D rMom(4_GeV, 0.01_GeV * stdNormal(rng),
-                        0.01_GeV * stdNormal(rng));
-    Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(
-        cov, rPos, rMom, 1., 42.);
-    const Acts::Surface* rSurface = &rStart.referenceSurface();
+    Acts::Vector3D rPos(-120_mm, 0 , 0);
+    Acts::Vector3D rMom(4_GeV, 0, 0);
+    Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy>
+      rStart(cov, rPos, rMom, 1., 0);
+
+    //const Acts::Surface* rSurface = &rStart.referenceSurface();
 
     // Set the KalmanFitter options
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
         ctx.geoContext, ctx.magFieldContext, ctx.calibContext,
-        Acts::VoidOutlierFinder(), rSurface);
+        Acts::VoidOutlierFinder(), &(*pSurface));
 
     ACTS_DEBUG("Invoke fitter");
     auto result = m_cfg.fit(trackSourcelinks, rStart, kfOptions);
