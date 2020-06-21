@@ -55,14 +55,13 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
 
     // Set initial parameters for the particle track
     Acts::BoundSymMatrix cov;
-    cov << std::pow(100_um, 2), 0., 0., 0., 0., 0., 0., std::pow(100_um, 2), 0.,
-        0., 0., 0., 0., 0., 0.025, 0., 0., 0., 0., 0., 0., 0.025, 0., 0., 0.,
-        0., 0., 0., 0.01, 0., 0., 0., 0., 0., 0., 1.;
+    cov << std::pow(1_mm, 2), 0., 0., 0., 0., 0., 0., std::pow(1_mm, 2), 0., 0.,
+        0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0.,
+        0., 0.01, 0., 0., 0., 0., 0., 0., 1.;
 
-    Acts::Vector3D rPos(-10_um, 10_um * stdNormal(rng), 10_um * stdNormal(rng));
-    Acts::Vector3D rMom(4_GeV, 0.025_GeV * stdNormal(rng),
-                        0.025_GeV * stdNormal(rng));
-
+    Acts::Vector3D rPos(-120_mm, 1_mm * stdNormal(rng), 1_mm * stdNormal(rng));
+    Acts::Vector3D rMom(4_GeV, 0.01_GeV * stdNormal(rng),
+                        0.01_GeV * stdNormal(rng));
     Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(
         cov, rPos, rMom, 1., 42.);
     const Acts::Surface* rSurface = &rStart.referenceSurface();

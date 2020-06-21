@@ -79,7 +79,7 @@ struct TelescopeTrackReader {
     std::vector<std::vector<PixelHit>> rawTracks =
         jsonTrackReader(fileName, nTracks);
 
-    // Create the source link tracks with raw tracks
+    // Loop over the raw track to create the source link track
     for (const auto& rtrack : rawTracks) {
       // The number of hits should be less or equal to number of provided
       // surfaces?
@@ -89,7 +89,6 @@ struct TelescopeTrackReader {
       Acts::ActsSymMatrixD<2> cov2D;
       cov2D << resolution[0] * resolution[0], 0., 0.,
           resolution[1] * resolution[1];
-
       // Create the track sourcelinks
       std::vector<PixelSourceLink> sourcelinks;
       sourcelinks.reserve(rtrack.size());
@@ -103,6 +102,7 @@ struct TelescopeTrackReader {
       // push the sourcelinks into the trajectory container
       sourcelinkTracks.push_back(sourcelinks);
     }
+
     return sourcelinkTracks;
   }
 
@@ -142,8 +142,9 @@ struct TelescopeTrackReader {
           uint16_t pixX = hit[0].GetInt();
           uint16_t pixY = hit[1].GetInt();
           uint16_t layerIndex = hit[2].GetInt();
-          track.emplace_back(PixelHit{layerIndex, (pixX - nPixX / 2.) * pitchX,
-                                      (pixY - nPixY / 2.) * pitchY});
+          track.emplace_back(PixelHit{layerIndex,
+                                      (pixX - (nPixX - 1) / 2.) * pitchX,
+                                      (pixY - (nPixY - 1) / 2.) * pitchY});
         }
       }
       // push the track to the track container
