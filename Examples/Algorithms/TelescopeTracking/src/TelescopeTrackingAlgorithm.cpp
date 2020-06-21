@@ -19,7 +19,7 @@ FW::TelescopeTrackingAlgorithm::TelescopeTrackingAlgorithm(
     : FW::BareAlgorithm("TelescopeTrackingAlgorithm", level),
       m_cfg(std::move(cfg)) {
   if (m_cfg.inputFileName.empty()) {
-    throw std::invalid_argument("Missing input data collection");
+    throw std::invalid_argument("Missing input data file");
   }
   if (m_cfg.outputTrajectories.empty()) {
     throw std::invalid_argument("Missing output trajectories collection");

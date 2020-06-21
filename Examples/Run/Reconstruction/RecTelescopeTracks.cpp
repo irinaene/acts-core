@@ -14,7 +14,7 @@
 #include "ACTFW/Framework/WhiteBoard.hpp"
 #include "ACTFW/Geometry/CommonGeometry.hpp"
 #include "ACTFW/Io/Performance/TelescopeTrackingPerformanceWriter.hpp"
-#include "ACTFW/Io/Root/RootTrajectoryWriter.hpp"
+#include "ACTFW/Io/Root/RootTelescopeTrackWriter.hpp"
 #include "ACTFW/Options/CommonOptions.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
 #include "ACTFW/TelescopeDetector/TelescopeDetector.hpp"
@@ -117,7 +117,8 @@ struct TelescopeTrackReader {
       const std::string& fileName, size_t nTracks) const {
     std::FILE* fp = std::fopen(fileName.c_str(), "r");
     if (!fp) {
-      std::fprintf(stderr, "File opening failed\n");
+      std::fprintf(stderr, "File %s opening failed\n", fileName.c_str());
+      throw std::ios_base::failure("Could not open '" + fileName);
     }
 
     char readBuffer[65536];
@@ -211,7 +212,7 @@ int main(int argc, char* argv[]) {
   // setup the fitter
   TelescopeTrackingAlgorithm::Config fitter;
   //@Todo: add run number information in the file name
-  fitter.inputFileName = inputDir + "/data.json";
+  fitter.inputFileName = inputDir + "/alpide-data.json";
   fitter.trackReader = trackReader;
   fitter.outputTrajectories = "trajectories";
   fitter.randomNumbers = rnd;
@@ -219,6 +220,15 @@ int main(int argc, char* argv[]) {
       trackingGeometry, magneticField, logLevel);
   sequencer.addAlgorithm(
       std::make_shared<TelescopeTrackingAlgorithm>(fitter, logLevel));
+
+  // write tracks from fitting
+  RootTelescopeTrackWriter::Config trackWriter;
+  trackWriter.inputTrajectories = fitter.outputTrajectories;
+  trackWriter.outputDir = outputDir;
+  trackWriter.outputFilename = "telescope_tracks.root";
+  trackWriter.outputTreename = "tracks";
+  sequencer.addWriter(
+      std::make_shared<RootTelescopeTrackWriter>(trackWriter, logLevel));
 
   // write reconstruction performance data
   TelescopeTrackingPerformanceWriter::Config perfFitter;
