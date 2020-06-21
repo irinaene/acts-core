@@ -6,9 +6,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <Acts/Utilities/Units.hpp>
 #include <memory>
 
+#include <Acts/Utilities/Units.hpp>
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/Sequencer.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
@@ -22,13 +22,13 @@
 #include "ACTFW/Utilities/Options.hpp"
 #include "ACTFW/Utilities/Paths.hpp"
 
+#include "rapidjson/myrapidjson.h"
+
 using namespace Acts::UnitLiterals;
 using namespace FW;
 
-
-#include "rapidjson/myrapidjson.h"
 ///
-/// Struct for 2D hit
+/// Struct for 2D pixel hit
 ///
 struct PixelHit {
   // The correspoinding hit index
@@ -42,25 +42,29 @@ struct PixelHit {
 };
 
 ///
-/// Function to read in one raw track
-///
-std::vector<PixelHit> readTrack(const std::string& fileName, size_t itrack) {
-  // One element in the vector represent a 2D hit on the track
-  std::vector<PixelHit> track;
-
-  return track;
-}
-
-///
 /// @brief Struct to read and create the source link tracks
 ///
 struct TelescopeTrackReader {
-  /// The detector resolution
+  /// The number of pixels in local x direction
+  size_t nPixX = 1054;
+
+  /// The number of pixels in local y direction
+  size_t nPixY = 512;
+
+  /// The size of pixel pitch in local x direction
+  double pitchX = 26.88_um;
+
+  /// The size of pixel pitch in local y direction
+  double pitchY = 29.24_um;
+
+  /// The pixel detector resolution
   std::array<double, 2> resolution = {5_um, 5_um};
 
   /// The ordered detector surfaces
   std::vector<const Acts::Surface*> detectorSurfaces;
 
+  /// Function to read and create source link tracks as input of fitter
+  ///
   /// @param fileName The input file with one line representing one raw track
   /// @param nTracks The number of tracks to process
   ///
@@ -68,21 +72,18 @@ struct TelescopeTrackReader {
   std::vector<std::vector<PixelSourceLink>> operator()(
       const std::string& fileName, size_t nTracks) const {
     // Create a container for the output tracks
-    std::vector<std::vector<PixelSourceLink>> trajectories;
-    trajectories.reserve(nTracks);
+    std::vector<std::vector<PixelSourceLink>> sourcelinkTracks;
+    sourcelinkTracks.reserve(nTracks);
 
-    // Read in the tracks
-    for (unsigned int itrack = 0; itrack < nTracks; itrack++) {
-      if (itrack % 100 == 0) {
-        std::cout << "Reading in track: " << itrack << "..." << std::endl;
-      }
+    // Read in the raw tracks
+    std::vector<std::vector<PixelHit>> rawTracks =
+        jsonTrackReader(fileName, nTracks);
 
-      // @Todo: call the file reader to read in one raw track
-      std::vector<PixelHit> hitLocals = readTrack(fileName, itrack);
-
+    // Create the source link tracks with raw tracks
+    for (const auto& rtrack : rawTracks) {
       // The number of hits should be less or equal to number of provided
       // surfaces?
-      assert(hitLocals.size() <= detectorSurfaces.size());
+      assert(rtrack.size() <= detectorSurfaces.size());
 
       // Setup local covariance
       Acts::ActsSymMatrixD<2> cov2D;
@@ -91,8 +92,8 @@ struct TelescopeTrackReader {
 
       // Create the track sourcelinks
       std::vector<PixelSourceLink> sourcelinks;
-      sourcelinks.reserve(hitLocals.size());
-      for (const auto& hit : hitLocals) {
+      sourcelinks.reserve(rtrack.size());
+      for (const auto& hit : rtrack) {
         Acts::Vector2D loc;
         loc << hit.locX, hit.locY;
         // push a hit
@@ -100,16 +101,59 @@ struct TelescopeTrackReader {
                                  cov2D);
       }
       // push the sourcelinks into the trajectory container
-      trajectories.push_back(sourcelinks);
+      sourcelinkTracks.push_back(sourcelinks);
     }
-    return trajectories;
+    return sourcelinkTracks;
+  }
+
+ private:
+  /// Function to read and create raw tracks from a json file
+  ///
+  /// @param fileName The input file with one line representing one raw track
+  /// @param nTracks The number of tracks to process
+  ///
+  /// @return The created raw tracks
+  std::vector<std::vector<PixelHit>> jsonTrackReader(
+      const std::string& fileName, size_t nTracks) const {
+    std::FILE* fp = std::fopen(fileName.c_str(), "r");
+    if (!fp) {
+      std::fprintf(stderr, "File opening failed\n");
+    }
+
+    char readBuffer[65536];
+    rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
+    rapidjson::Document data;
+    data.ParseStream(is);
+    if (!data.IsArray()) {
+      std::fprintf(stderr, "data file is not json array\n");
+      exit(2);
+    }
+
+    rapidjson::Value::ConstValueIterator ev_it = data.Begin();
+    rapidjson::Value::ConstValueIterator ev_it_end = data.End();
+
+    std::vector<std::vector<PixelHit>> rawTracks;
+    rawTracks.reserve(nTracks);
+    size_t itrack = 0;
+    while (ev_it != ev_it_end and itrack < nTracks) {
+      std::vector<PixelHit> track;
+      for (auto& subev : ev_it->GetArray()) {
+        for (auto& hit : subev["hit_xyz_array"].GetArray()) {
+          uint16_t pixX = hit[0].GetInt();
+          uint16_t pixY = hit[1].GetInt();
+          uint16_t layerIndex = hit[2].GetInt();
+          track.emplace_back(PixelHit{layerIndex, (pixX - nPixX / 2.) * pitchX,
+                                      (pixY - nPixY / 2.) * pitchY});
+        }
+      }
+      // push the track to the track container
+      rawTracks.push_back(track);
+      itrack++;
+      ++ev_it;
+    }
+    return rawTracks;
   }
 };
-
-
-
-
-
 
 int main(int argc, char* argv[]) {
   TelescopeDetector detector;
@@ -165,6 +209,7 @@ int main(int argc, char* argv[]) {
 
   // setup the fitter
   TelescopeTrackingAlgorithm::Config fitter;
+  //@Todo: add run number information in the file name
   fitter.inputFileName = inputDir + "/data.json";
   fitter.trackReader = trackReader;
   fitter.outputTrajectories = "trajectories";
@@ -182,37 +227,4 @@ int main(int argc, char* argv[]) {
       perfFitter, logLevel));
 
   return sequencer.run();
-}
-
-void json_file_reader {
-  
-  std::string datafile_name;
-
-  std::FILE* fp = std::fopen(datafile_name.c_str(), "r");
-  if(!fp) {
-    std::fprintf(stderr, "File opening failed\n");
-  }
-
-  char readBuffer[65536];
-  rapidjson::FileReadStream is(fp, readBuffer, sizeof(readBuffer));
-  rapidjson::Document data;
-  data.ParseStream(is);
-  if(!data.IsArray()){
-    std::frpintf(stderr, "data file is not json array\n");
-    exit(2);
-  }
-  
-  rapidjson::Value::ConstValueIterator ev_it = data.Begin();
-  rapidjson::Value::ConstValueIterator ev_it_end = data.End();
-  while (ev_it != ev_it_end)
-  {    
-    for (auto& subev : ev_it->GetArray()){
-      for (auto& hit : subev["hit_xyz_array"].GetArray()){
-        uint16_t xpix   =  hit[0].GetInt();
-        uint16_t ypix   =  hit[1].GetInt();
-        uint16_t zlayer =  hit[2].GetInt();
-      }
-    }
-    ++ev_it;
-  }
 }
