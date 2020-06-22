@@ -2,7 +2,8 @@ add_library(
   ActsExamplesIoObj SHARED
   src/ObjHelper.cpp
   src/ObjSurfaceWriter.cpp
-  src/ObjTrackingGeometryWriter.cpp)
+  src/ObjTrackingGeometryWriter.cpp
+  src/ObjTelescopeTrackWriter.cpp)
 target_include_directories(
   ActsExamplesIoObj
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)

@@ -53,6 +53,7 @@ target_link_libraries(
     ActsExamplesDetectorTelescope
     ActsExamplesMagneticField
     ActsExamplesIoCsv
+    ActsExamplesIoObj
     ActsExamplesIoPerformance)
 
 install(

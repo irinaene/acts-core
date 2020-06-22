@@ -20,6 +20,7 @@
 
 #include "ACTFW/Io/Performance/TelescopeTrackingPerformanceWriter.hpp"
 #include "ACTFW/Io/Root/RootTelescopeTrackWriter.hpp"
+#include "ACTFW/Plugins/Obj/ObjTelescopeTrackWriter.hpp"
 #include "ACTFW/TelescopeDetector/TelescopeDetector.hpp"
 #include "ACTFW/TelescopeTracking/TelescopeTrackingAlgorithm.hpp"
 
@@ -321,14 +322,26 @@ int main(int argc, char* argv[]) {
   sequencer.addAlgorithm(
       std::make_shared<TelescopeTrackingAlgorithm>(fitter, logLevel));
 
-  // write tracks from fitting
-  RootTelescopeTrackWriter::Config trackWriter;
-  trackWriter.inputTrajectories = fitter.outputTrajectories;
-  trackWriter.outputDir = outputDir;
-  trackWriter.outputFilename = "telescope_tracks.root";
-  trackWriter.outputTreename = "tracks";
+  // write tracks as root tree
+  RootTelescopeTrackWriter::Config trackRootWriter;
+  trackRootWriter.inputTrajectories = fitter.outputTrajectories;
+  trackRootWriter.outputDir = outputDir;
+  trackRootWriter.outputFilename = "telescope_tracks.root";
+  trackRootWriter.outputTreename = "tracks";
   sequencer.addWriter(
-      std::make_shared<RootTelescopeTrackWriter>(trackWriter, logLevel));
+      std::make_shared<RootTelescopeTrackWriter>(trackRootWriter, logLevel));
+
+  if (vm["output-obj"].template as<bool>()) {
+    // write the tracks (measurements only for the moment) as Csv
+    Obj::ObjTelescopeTrackWriter::Config trackObjWriter;
+    trackObjWriter.inputTrajectories = fitter.outputTrajectories;
+    trackObjWriter.outputDir = outputDir;
+    // The number of tracks you want to show (in default, all of tracks will be
+    // shown)
+    trackObjWriter.maxNumTracks = 100;
+    sequencer.addWriter(std::make_shared<Obj::ObjTelescopeTrackWriter>(
+        trackObjWriter, logLevel));
+  }
 
   // write reconstruction performance data
   TelescopeTrackingPerformanceWriter::Config perfFitter;
