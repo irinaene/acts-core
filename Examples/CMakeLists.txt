@@ -3,5 +3,4 @@ add_subdirectory(Detectors)
 add_subdirectory(Framework)
 add_subdirectory(Io)
 add_subdirectory(Run)
-
-add_subdirectory(RecoTelescope)
+add_subdirectory(AlpideBeamTele)
