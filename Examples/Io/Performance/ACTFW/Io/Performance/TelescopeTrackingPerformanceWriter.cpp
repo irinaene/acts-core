@@ -17,6 +17,10 @@
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
 #include "Acts/Utilities/Helpers.hpp"
 
+#include "Acts/Visualization/EventDataVisualization.hpp"
+#include "Acts/Visualization/IVisualization.hpp"
+#include "Acts/Visualization/ObjVisualization.hpp"
+
 using Acts::VectorHelpers::eta;
 
 FW::TelescopeTrackingPerformanceWriter::TelescopeTrackingPerformanceWriter(
@@ -83,6 +87,7 @@ FW::ProcessCode FW::TelescopeTrackingPerformanceWriter::writeT(
   // Exclusive access to the tree while writing
   std::lock_guard<std::mutex> lock(m_writeMutex);
 
+  unsigned int itrack = 0;
   // Loop over all trajectories
   for (const auto& traj : trajectories) {
     // The trajectory entry indices and the multiTrajectory
@@ -100,6 +105,28 @@ FW::ProcessCode FW::TelescopeTrackingPerformanceWriter::writeT(
     }
     // Get the entry index for the single trajectory
     auto& trackTip = trackTips.front();
+
+    // @Todo: move it to specific tool
+    if (itrack == 1) {
+      Acts::ObjVisualization obj;
+
+      double momentumScale = 1;
+      double localErrorScale = 10.;
+      double directionErrorScale = 500;
+
+      const Acts::IVisualization::ColorType scolor = {235, 198, 52};
+      const Acts::IVisualization::ColorType& mcolor = {255, 145, 48};
+      const Acts::IVisualization::ColorType& ppcolor = {138, 214, 255};
+      const Acts::IVisualization::ColorType& fpcolor = {92, 149, 255};
+      const Acts::IVisualization::ColorType& spcolor = {20, 120, 20};
+
+      Acts::EventDataVisualization::drawMultiTrajectory(
+          obj, mj, trackTip, ctx.geoContext, momentumScale, localErrorScale,
+          directionErrorScale, true, true, true, true, true, 50, scolor, mcolor,
+          ppcolor, fpcolor, spcolor);
+
+      obj.write("EventData_MultiTrajectory");
+    }
 
     // Select reco track with fitted parameters
     if (not traj.hasTrackParameters(trackTip)) {
@@ -119,6 +146,7 @@ FW::ProcessCode FW::TelescopeTrackingPerformanceWriter::writeT(
     m_trackSummaryPlotTool.fill(m_trackSummaryPlotCache, fittedParameters,
                                 trajState.nStates, trajState.nMeasurements,
                                 trajState.nOutliers, trajState.nHoles);
+    itrack++;
   }
 
   // Fill the efficiency, how to define

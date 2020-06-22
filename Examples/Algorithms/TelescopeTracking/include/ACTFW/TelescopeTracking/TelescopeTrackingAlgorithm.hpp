@@ -49,13 +49,11 @@ class TelescopeTrackingAlgorithm final : public BareAlgorithm {
     /// Input data reader
     SourceLinkTrackReader trackReader;
     /// Number of tracks
-    size_t nTracks = 1000;
+    size_t nTracks = 10000;
     /// Output fitted trajectories collection.
     std::string outputTrajectories;
     /// Type erased fitter function.
     FitterFunction fit;
-    /// Random numbers service.
-    std::shared_ptr<RandomNumbers> randomNumbers = nullptr;
   };
 
   /// Constructor of the fitting algorithm

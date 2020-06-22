@@ -30,21 +30,23 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
     const FW::AlgorithmContext& ctx) const {
   using namespace Acts::UnitLiterals;
 
-  // setup random number generator and standard gaussian
-  std::normal_distribution<double> stdNormal(0.0, 1.0);
-
   // Read input data
   const std::vector<SourceLinkTrack> sourcelinkTracks =
       m_cfg.trackReader(m_cfg.inputFileName, m_cfg.nTracks);
+
+  std::cout << "There are " << sourcelinkTracks.size() << " tracks read-in"
+            << std::endl;
 
   // Prepare the output data with MultiTrajectory
   std::vector<PixelMultiTrajectory> trajectories;
   trajectories.reserve(sourcelinkTracks.size());
 
-  // Construct a plane surface centered around (0., 0., 0) and has a normal vector (1., 0., 0.) as the target surface
-  auto pSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(Acts::Vector3D{0.,0.,0.}, Acts::Vector3D{1., 0.,0.});  
+  // Construct a plane surface centered around (0., 0., 0) and has a normal
+  // vector (1., 0., 0.) as the target surface
+  auto pSurface = Acts::Surface::makeShared<Acts::PlaneSurface>(
+      Acts::Vector3D{0., 0., 0.}, Acts::Vector3D{1., 0., 0.});
 
-  for(std::size_t itrack = 0; itrack < sourcelinkTracks.size(); ++itrack) {
+  for (std::size_t itrack = 0; itrack < sourcelinkTracks.size(); ++itrack) {
     // The list of hits and the initial start parameters
     const auto& trackSourcelinks = sourcelinkTracks[itrack];
 
@@ -57,16 +59,16 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
 
     // Set initial parameters for the particle track
     Acts::BoundSymMatrix cov;
-    cov << std::pow(1_mm, 2), 0., 0., 0., 0., 0., 0., std::pow(1_mm, 2), 0., 0.,
-        0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0., 0., 0.01, 0., 0., 0., 0., 0.,
-        0., 0.01, 0., 0., 0., 0., 0., 0., 1.;
+    cov << std::pow(10_mm, 2), 0., 0., 0., 0., 0., 0., std::pow(10_mm, 2), 0.,
+        0., 0., 0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 0.0001, 0., 0., 0.,
+        0., 0., 0., 0.0001, 0., 0., 0., 0., 0., 0., 1.;
 
-    Acts::Vector3D rPos(-120_mm, 0 , 0);
+    Acts::Vector3D rPos(-120_mm, 0, 0);
     Acts::Vector3D rMom(4_GeV, 0, 0);
-    Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy>
-      rStart(cov, rPos, rMom, 1., 0);
+    Acts::SingleCurvilinearTrackParameters<Acts::ChargedPolicy> rStart(
+        cov, rPos, rMom, 1., 0);
 
-    //const Acts::Surface* rSurface = &rStart.referenceSurface();
+    // const Acts::Surface* rSurface = &rStart.referenceSurface();
 
     // Set the KalmanFitter options
     Acts::KalmanFitterOptions<Acts::VoidOutlierFinder> kfOptions(
