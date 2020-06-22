@@ -77,6 +77,20 @@ FW::RootTelescopeTrackWriter::RootTelescopeTrackWriter(
     m_outputTree->Branch("pull_y_hit", &m_pull_y_hit);
     m_outputTree->Branch("dim_hit", &m_dim_hit);
 
+    m_outputTree->Branch("hasFittedParams", &m_hasFittedParams);
+    m_outputTree->Branch("eLOC0_fit", &m_eLOC0_fit);
+    m_outputTree->Branch("eLOC1_fit", &m_eLOC1_fit);
+    m_outputTree->Branch("ePHI_fit", &m_ePHI_fit);
+    m_outputTree->Branch("eTHETA_fit", &m_eTHETA_fit);
+    m_outputTree->Branch("eQOP_fit", &m_eQOP_fit);
+    m_outputTree->Branch("eT_fit", &m_eT_fit);
+    m_outputTree->Branch("err_eLOC0_fit", &m_err_eLOC0_fit);
+    m_outputTree->Branch("err_eLOC1_fit", &m_err_eLOC1_fit);
+    m_outputTree->Branch("err_ePHI_fit", &m_err_ePHI_fit);
+    m_outputTree->Branch("err_eTHETA_fit", &m_err_eTHETA_fit);
+    m_outputTree->Branch("err_eQOP_fit", &m_err_eQOP_fit);
+    m_outputTree->Branch("err_eT_fit", &m_err_eT_fit);
+
     m_outputTree->Branch("nPredicted", &m_nPredicted);
     m_outputTree->Branch("predicted", &m_prt);
     m_outputTree->Branch("eLOC0_prt", &m_eLOC0_prt);
@@ -217,6 +231,30 @@ FW::ProcessCode FW::RootTelescopeTrackWriter::writeT(
         Acts::MultiTrajectoryHelpers::trajectoryState(mj, trackTip);
     m_nMeasurements = trajState.nMeasurements;
     m_nStates = trajState.nStates;
+
+    // Get the fitted track parameter
+    m_hasFittedParams = false;
+    if (traj.hasTrackParameters(trackTip)) {
+      m_hasFittedParams = true;
+      const auto& boundParam = traj.trackParameters(trackTip);
+      const auto& parameter = boundParam.parameters();
+      const auto& covariance = *boundParam.covariance();
+      m_eLOC0_fit = parameter[Acts::ParDef::eLOC_0];
+      m_eLOC1_fit = parameter[Acts::ParDef::eLOC_1];
+      m_ePHI_fit = parameter[Acts::ParDef::ePHI];
+      m_eTHETA_fit = parameter[Acts::ParDef::eTHETA];
+      m_eQOP_fit = parameter[Acts::ParDef::eQOP];
+      m_eT_fit = parameter[Acts::ParDef::eT];
+      m_err_eLOC0_fit =
+          sqrt(covariance(Acts::ParDef::eLOC_0, Acts::ParDef::eLOC_0));
+      m_err_eLOC1_fit =
+          sqrt(covariance(Acts::ParDef::eLOC_1, Acts::ParDef::eLOC_1));
+      m_err_ePHI_fit = sqrt(covariance(Acts::ParDef::ePHI, Acts::ParDef::ePHI));
+      m_err_eTHETA_fit =
+          sqrt(covariance(Acts::ParDef::eTHETA, Acts::ParDef::eTHETA));
+      m_err_eQOP_fit = sqrt(covariance(Acts::ParDef::eQOP, Acts::ParDef::eQOP));
+      m_err_eT_fit = sqrt(covariance(Acts::ParDef::eT, Acts::ParDef::eT));
+    }
 
     // Get the trackStates on the trajectory
     m_nPredicted = 0;

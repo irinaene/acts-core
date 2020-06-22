@@ -94,6 +94,20 @@ class RootTelescopeTrackWriter final
   std::vector<float> m_pull_y_hit;  ///< hit pull y
   std::vector<int> m_dim_hit;       ///< dimension of measurement
 
+  bool m_hasFittedParams;        ///< if the track has fitted parameter
+  float m_eLOC0_fit{-99.};       ///< fitted parameter eLOC_0
+  float m_eLOC1_fit{-99.};       ///< fitted parameter eLOC_1
+  float m_ePHI_fit{-99.};        ///< fitted parameter ePHI
+  float m_eTHETA_fit{-99.};      ///< fitted parameter eTHETA
+  float m_eQOP_fit{-99.};        ///< fitted parameter eQOP
+  float m_eT_fit{-99.};          ///< fitted parameter eT
+  float m_err_eLOC0_fit{-99.};   ///< fitted parameter eLOC_-99.err
+  float m_err_eLOC1_fit{-99.};   ///< fitted parameter eLOC_1 err
+  float m_err_ePHI_fit{-99.};    ///< fitted parameter ePHI err
+  float m_err_eTHETA_fit{-99.};  ///< fitted parameter eTHETA err
+  float m_err_eQOP_fit{-99.};    ///< fitted parameter eQOP err
+  float m_err_eT_fit{-99.};      ///< fitted parameter eT err
+
   int m_nPredicted{0};      ///< number of states with predicted parameter
   std::vector<bool> m_prt;  ///< predicted status
   std::vector<float> m_eLOC0_prt;       ///< predicted parameter eLOC0

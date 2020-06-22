@@ -67,9 +67,9 @@ std::unique_ptr<const Acts::TrackingGeometry> buildDetector(
   rotation.col(1) = yPos;
   rotation.col(2) = zPos;
 
-  // Boundaries of the surfaces (ALPIDE SIZE: 30.81896 * 13.76256_mm)
+  // Boundaries of the surfaces (ALPIDE SIZE: 27.52512 * 13.76256_mm*mm)
   const auto rBounds = std::make_shared<const Acts::RectangleBounds>(
-      Acts::RectangleBounds(30.81896_mm, 13.76256_mm));
+      Acts::RectangleBounds(27.52512_mm, 13.76256_mm));
 
   // Material of the surfaces
   Acts::MaterialProperties matProp(95.7, 465.2, 28.03, 14., 2.32e-3, 100_um);
