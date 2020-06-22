@@ -1,15 +1,16 @@
-add_executable(ActsRecTelescopeTracks ./RecTelescopeTracks.cpp)
+add_executable(ActsRecTelescopeTracks RecTelescopeTracks.cpp)
 target_link_libraries(ActsRecTelescopeTracks  
   PRIVATE
   ActsExamplesFramework
   ActsExamplesCommon
-  ActsExamplesTelescopeTracking
-  ActsExamplesDetectorTelescope
   ActsExamplesMagneticField
   ActsExamplesIoCsv
   ActsExamplesIoObj
   ActsExamplesIoPerformance
-  altel_acts
+
+  ActsExamplesAlpideBeamTele
+  rapidjson
+
   )
 
 

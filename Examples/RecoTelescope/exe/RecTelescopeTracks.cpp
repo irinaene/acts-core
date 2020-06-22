@@ -18,13 +18,13 @@
 #include "ACTFW/Utilities/Paths.hpp"
 #include "Acts/Utilities/Units.hpp"
 
-#include "ACTFW/Io/Performance/TelescopeTrackingPerformanceWriter.hpp"
-#include "ACTFW/Io/Root/RootTelescopeTrackWriter.hpp"
-#include "ACTFW/Plugins/Obj/ObjTelescopeTrackWriter.hpp"
-#include "ACTFW/TelescopeDetector/TelescopeDetector.hpp"
-#include "ACTFW/TelescopeTracking/TelescopeTrackingAlgorithm.hpp"
+#include "TelescopeTrackingPerformanceWriter.hpp"
+#include "RootTelescopeTrackWriter.hpp"
+#include "ObjTelescopeTrackWriter.hpp"
+#include "TelescopeDetector.hpp"
+#include "TelescopeTrackingAlgorithm.hpp"
 
-#include "rapidjson/myrapidjson.h"
+#include "myrapidjson.h"
 
 using namespace Acts::UnitLiterals;
 using namespace FW;

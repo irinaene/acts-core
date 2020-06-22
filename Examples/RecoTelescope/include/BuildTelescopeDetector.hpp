@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "TelescopeDetectorElement.hpp"
+
 #include <array>
 #include <cmath>
 #include <iostream>
@@ -15,7 +17,6 @@
 #include <memory>
 #include <vector>
 
-#include "ACTFW/TelescopeDetector/TelescopeDetectorElement.hpp"
 #include "Acts/Geometry/CuboidVolumeBuilder.hpp"
 #include "Acts/Geometry/LayerArrayCreator.hpp"
 #include "Acts/Geometry/LayerCreator.hpp"

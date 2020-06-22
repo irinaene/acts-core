@@ -6,6 +6,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "TelescopeTrackingAlgorithm.hpp"
+
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <map>
@@ -13,7 +15,6 @@
 #include <stdexcept>
 
 #include "ACTFW/Plugins/BField/ScalableBField.hpp"
-#include "ACTFW/TelescopeTracking/TelescopeTrackingAlgorithm.hpp"
 #include "Acts/Fitter/GainMatrixSmoother.hpp"
 #include "Acts/Fitter/GainMatrixUpdater.hpp"
 #include "Acts/Geometry/GeometryID.hpp"
