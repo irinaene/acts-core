@@ -49,7 +49,7 @@ class TelescopeTrackingAlgorithm final : public BareAlgorithm {
     /// Input data reader
     SourceLinkTrackReader trackReader;
     /// Number of tracks
-    size_t nTracks = 10000;
+    size_t maxNumTracks = std::numeric_limits<size_t>::max();
     /// Output fitted trajectories collection.
     std::string outputTrajectories;
     /// Type erased fitter function.

@@ -32,7 +32,7 @@ FW::ProcessCode FW::TelescopeTrackingAlgorithm::execute(
 
   // Read input data
   const std::vector<SourceLinkTrack> sourcelinkTracks =
-      m_cfg.trackReader(m_cfg.inputFileName, m_cfg.nTracks);
+      m_cfg.trackReader(m_cfg.inputFileName, m_cfg.maxNumTracks);
 
   std::cout << "There are " << sourcelinkTracks.size() << " tracks read-in"
             << std::endl;

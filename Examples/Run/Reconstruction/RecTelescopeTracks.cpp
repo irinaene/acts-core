@@ -315,8 +315,11 @@ int main(int argc, char* argv[]) {
   TelescopeTrackingAlgorithm::Config fitter;
   //@Todo: add run number information in the file name
   fitter.inputFileName = inputDir + "/alpide-data.json";
-  fitter.trackReader = trackReader;
   fitter.outputTrajectories = "trajectories";
+  fitter.trackReader = trackReader;
+  // The number of tracks you want to process (in default, all of tracks will be
+  // read and fitted)
+  fitter.maxNumTracks = 10000;
   fitter.fit = TelescopeTrackingAlgorithm::makeFitterFunction(
       trackingGeometry, magneticField, logLevel);
   sequencer.addAlgorithm(
