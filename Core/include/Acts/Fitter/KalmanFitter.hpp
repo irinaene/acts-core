@@ -400,10 +400,9 @@ class KalmanFitter {
               state.data().ismoothed = detail_lt::IndexData::kInvalid;
             }
           });
-
-          // Remember the track fitting is done
-          result.finished = true;
         }
+        // Remember the track fitting is done
+        result.finished = true;
       }
     }
 

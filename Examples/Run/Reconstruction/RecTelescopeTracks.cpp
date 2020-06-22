@@ -8,7 +8,6 @@
 
 #include <memory>
 
-#include <Acts/Utilities/Units.hpp>
 #include "ACTFW/EventData/Track.hpp"
 #include "ACTFW/Framework/Sequencer.hpp"
 #include "ACTFW/Framework/WhiteBoard.hpp"
@@ -17,13 +16,12 @@
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
 #include "ACTFW/Utilities/Options.hpp"
 #include "ACTFW/Utilities/Paths.hpp"
-
+#include "Acts/Utilities/Units.hpp"
 
 #include "ACTFW/Io/Performance/TelescopeTrackingPerformanceWriter.hpp"
 #include "ACTFW/Io/Root/RootTelescopeTrackWriter.hpp"
 #include "ACTFW/TelescopeDetector/TelescopeDetector.hpp"
 #include "ACTFW/TelescopeTracking/TelescopeTrackingAlgorithm.hpp"
-
 
 #include "rapidjson/myrapidjson.h"
 
@@ -44,42 +42,40 @@ struct PixelHit {
   double locY = 0;
 };
 
-
-class ClusterPool{
-public:  
-  void addHit(uint64_t x, uint64_t y, uint64_t z){
-    uint64_t index = x + (y<<16) + (z<<32);
+class ClusterPool {
+ public:
+  void addHit(uint64_t x, uint64_t y, uint64_t z) {
+    uint64_t index = x + (y << 16) + (z << 32);
     m_hit_col.push_back(index);
   }
-  
-  void buildClusters(){
-    std::vector<uint64_t> hit_col_remain= m_hit_col;
 
-    while(!hit_col_remain.empty()){
+  void buildClusters() {
+    std::vector<uint64_t> hit_col_remain = m_hit_col;
+
+    while (!hit_col_remain.empty()) {
       std::vector<uint64_t> hit_col_this_cluster;
       std::vector<uint64_t> hit_col_this_cluster_edge;
-      
+
       // get first edge seed hit
       // from un-identifed hit to edge hit
       hit_col_this_cluster_edge.push_back(hit_col_remain[0]);
       hit_col_remain.erase(hit_col_remain.begin());
-      
-      while(!hit_col_this_cluster_edge.empty()){
+
+      while (!hit_col_this_cluster_edge.empty()) {
         uint64_t e = hit_col_this_cluster_edge[0];
-        uint64_t c  = 0x00000001; //LSB column  x
-        uint64_t r  = 0x00010000; //LSB row     y
-        
-        //  8 sorround hits search, 
-        std::vector<uint64_t> sorround_col
-          {e-c+r, e+r, e+c+r,
-           e-c  ,      e+c,
-           e-c-r, e-r, e+c-r
-          };
-        
-        for(auto& sr: sorround_col){
+        uint64_t c = 0x00000001;  // LSB column  x
+        uint64_t r = 0x00010000;  // LSB row     y
+
+        //  8 sorround hits search,
+        std::vector<uint64_t> sorround_col{e - c + r, e + r,    e + c + r,
+                                           e - c,     e + c,    e - c - r,
+                                           e - r,     e + c - r};
+
+        for (auto& sr : sorround_col) {
           // only search on un-identifed hits
-          auto sr_found_it = std::find(hit_col_remain.begin(), hit_col_remain.end(), sr);
-          if(sr_found_it != hit_col_remain.end()){
+          auto sr_found_it =
+              std::find(hit_col_remain.begin(), hit_col_remain.end(), sr);
+          if (sr_found_it != hit_col_remain.end()) {
             // move the found sorround hit
             // from un-identifed hit to an edge hit
             hit_col_this_cluster_edge.push_back(sr);
@@ -87,33 +83,32 @@ public:
           }
         }
 
-        // after sorround search  
+        // after sorround search
         // move from edge hit to cluster hit
         hit_col_this_cluster.push_back(e);
         hit_col_this_cluster_edge.erase(hit_col_this_cluster_edge.begin());
       }
 
-      double   cx = 0;
-      double   cy = 0;
+      double cx = 0;
+      double cy = 0;
       uint64_t cz = 0;
-      for(auto &hit : hit_col_this_cluster){
-        cx+= (hit & 0xffff);
-        cy+= (hit & 0xffff0000) >> 16;
+      for (auto& hit : hit_col_this_cluster) {
+        cx += (hit & 0xffff);
+        cy += (hit & 0xffff0000) >> 16;
         cz = (hit & 0xffff00000000) >> 32;
       }
       cx /= hit_col_this_cluster.size();
       cy /= hit_col_this_cluster.size();
-     
+
       m_ccenter_col.push_back(PixelHit{cz, cx, cy});
       m_cluster_col.push_back(std::move(hit_col_this_cluster));
     }
   }
-  
-  std::vector<uint64_t>  m_hit_col;
-  std::vector<std::vector<uint64_t>> m_cluster_col;
-  std::vector<PixelHit>  m_ccenter_col;
-};
 
+  std::vector<uint64_t> m_hit_col;
+  std::vector<std::vector<uint64_t>> m_cluster_col;
+  std::vector<PixelHit> m_ccenter_col;
+};
 
 ///
 /// @brief Struct to read and create the source link tracks
@@ -132,7 +127,7 @@ struct TelescopeTrackReader {
   double pitchY = 29.24_um;
 
   /// The pixel detector resolution
-  std::array<double, 2> resolution = {5_um, 5_um};
+  std::array<double, 2> resolution = {100_um, 100_um};
 
   /// The ordered detector surfaces
   std::vector<const Acts::Surface*> detectorSurfaces;
@@ -150,21 +145,21 @@ struct TelescopeTrackReader {
     sourcelinkTracks.reserve(nTracks);
 
     // Read in the raw tracks
-    // TODO: clustering
     std::vector<std::vector<PixelHit>> rawTracks =
         jsonTrackReader(fileName, nTracks);
 
+    std::cout << "There are " << rawTracks.size()
+              << " tracks from jsonTrackReader" << std::endl;
     // Loop over the raw track to create the source link track
     for (const auto& rtrack : rawTracks) {
       // The number of hits should be less or equal to number of provided
       // surfaces?
       assert(rtrack.size() <= detectorSurfaces.size());
-      
-      
+
       // Setup local covariance
       Acts::ActsSymMatrixD<2> cov2D;
-      cov2D << resolution[0] * resolution[0],     0.,
-                0.,                               resolution[1] * resolution[1];
+      cov2D << resolution[0] * resolution[0], 0., 0.,
+          resolution[1] * resolution[1];
       // Create the track sourcelinks
       std::vector<PixelSourceLink> sourcelinks;
       sourcelinks.reserve(rtrack.size());
@@ -214,7 +209,7 @@ struct TelescopeTrackReader {
     size_t itrack = 0;
     while (ev_it != ev_it_end and itrack < nTracks) {
       ClusterPool cpool;
-      
+
       for (auto& subev : ev_it->GetArray()) {
         for (auto& hit : subev["hit_xyz_array"].GetArray()) {
           uint16_t pixX = hit[0].GetInt();
@@ -224,30 +219,36 @@ struct TelescopeTrackReader {
           // track.emplace_back(PixelHit{layerIndex,
           //                             (pixX - (nPixX - 1) / 2.) * pitchX,
           //                             (pixY - (nPixY - 1) / 2.) * pitchY});
-          cpool.buildClusters();
-          
         }
       }
+      cpool.buildClusters();
       ++ev_it;
 
       std::vector<PixelHit> track = cpool.m_ccenter_col;
-      
-      std::vector<uint16_t> cluster_counter(6,0);
-      for(auto &c: track){
-        cluster_counter[c.surfaceIndex] ++;
-        c.locX *= pitchX;
-        c.locY *= pitchY;
+      std::cout << "track size " << track.size() << std::endl;
+
+      std::vector<uint16_t> cluster_counter(6, 0);
+      for (auto& c : track) {
+        cluster_counter[c.surfaceIndex]++;
+        c.locX = (c.locX - (nPixX - 1) / 2.) * pitchX;
+        c.locY = (c.locY - (nPixY - 1) / 2.) * pitchY;
       }
 
       bool isgood_data = true;
-      for(auto n: cluster_counter){
-        if(n != 1)
+      for (auto n : cluster_counter) {
+        if (n != 1) {
           isgood_data = false;
+          break;
+        }
       }
-      if(!isgood_data){
+      if (!isgood_data) {
         continue;
       }
-      
+
+      std::fprintf(stdout, "\nadd track clusters:");
+      for (auto& h : track) {
+        std::fprintf(stdout, " [%f, %f, %lu] ", h.locX, h.locY, h.surfaceIndex);
+      }
       // push the track to the track container
       rawTracks.push_back(track);
       itrack++;
@@ -285,13 +286,13 @@ int main(int argc, char* argv[]) {
       std::make_shared<FW::RandomNumbers>(Options::readRandomNumbersConfig(vm));
 
   // Setup detector geometry
-  auto geometry = Geometry::build(vm,detector);
+  auto geometry = Geometry::build(vm, detector);
   auto trackingGeometry = geometry.first;
   // Add context decorators
   for (auto cdr : geometry.second) {
     sequencer.addContextDecorator(cdr);
   }
-  
+
   // Setup the magnetic field
   auto magneticField = Options::readBField(vm);
 
@@ -315,11 +316,10 @@ int main(int argc, char* argv[]) {
   fitter.inputFileName = inputDir + "/alpide-data.json";
   fitter.trackReader = trackReader;
   fitter.outputTrajectories = "trajectories";
-  fitter.randomNumbers = rnd;
   fitter.fit = TelescopeTrackingAlgorithm::makeFitterFunction(
-                                                              trackingGeometry, magneticField, logLevel);
+      trackingGeometry, magneticField, logLevel);
   sequencer.addAlgorithm(
-                         std::make_shared<TelescopeTrackingAlgorithm>(fitter, logLevel));
+      std::make_shared<TelescopeTrackingAlgorithm>(fitter, logLevel));
 
   // write tracks from fitting
   RootTelescopeTrackWriter::Config trackWriter;
