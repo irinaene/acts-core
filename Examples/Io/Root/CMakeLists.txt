@@ -12,7 +12,6 @@ add_library(
   src/RootVertexAndTracksWriter.cpp
   src/RootVertexAndTracksReader.cpp
   src/RootTrajectoryWriter.cpp
-  src/RootTelescopeTrackWriter.cpp
   )
 target_include_directories(
   ActsExamplesIoRoot
