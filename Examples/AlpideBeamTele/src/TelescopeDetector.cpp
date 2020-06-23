@@ -6,13 +6,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "ACTFW/TelescopeDetector/TelescopeDetector.hpp"
+#include "TelescopeDetector.hpp"
+#include "BuildTelescopeDetector.hpp"
+#include "TelescopeDetectorElement.hpp"
 
 #include <boost/program_options.hpp>
 
 #include "ACTFW/Framework/IContextDecorator.hpp"
-#include "ACTFW/TelescopeDetector/BuildTelescopeDetector.hpp"
-#include "ACTFW/TelescopeDetector/TelescopeDetectorElement.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
 #include "Acts/Utilities/Logger.hpp"
 
