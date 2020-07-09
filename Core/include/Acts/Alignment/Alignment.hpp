@@ -44,7 +44,7 @@ struct AlignmentOptions {
   /// @param maxIters The alignment maximum iterations
   AlignmentOptions(const fit_options_t& fOptions,
                    const std::vector<const Surface*>& aSurfaces = {},
-                   double chi2CutOff = 1, size_t maxIters = 1)
+                   double chi2CutOff = 1, size_t maxIters = 5)
       : fitOptions(fOptions),
         alignableSurfaces(aSurfaces),
         deltaChi2CutOff(chi2CutOff),
@@ -185,33 +185,41 @@ struct Alignment {
       auto evaluateRes = evaluateTrackAlignmentState(
           fitOptions.geoContext, sourcelinks, sParameters,
           fitOptionsWithRefSurface, idxedAlignSurfaces);
-      if (evaluateRes.ok()) {
-        const auto& alignState = evaluateRes.value();
-        for (const auto& [rowSurface, rows] : alignState.alignedSurfaces) {
-          const auto& [dstRow, srcRow] = rows;
-          // Fill the results into full chi2 derivative matrixs
-          sumChi2Derivative.segment<eAlignmentParametersSize>(
-              dstRow * eAlignmentParametersSize) +=
-              alignState.alignmentToChi2Derivative.segment(
-                  srcRow * eAlignmentParametersSize, eAlignmentParametersSize);
+      if (not evaluateRes.ok()) {
+        ACTS_WARNING("Evaluation of alignment state for track" << iTraj
+                                                               << "failed");
+        continue;
+      }
+      const auto& alignState = evaluateRes.value();
+      for (const auto& [rowSurface, rows] : alignState.alignedSurfaces) {
+        const auto& [dstRow, srcRow] = rows;
+        // Fill the results into full chi2 derivative matrixs
+        sumChi2Derivative.segment<eAlignmentParametersSize>(
+            dstRow * eAlignmentParametersSize) +=
+            alignState.alignmentToChi2Derivative.segment(
+                srcRow * eAlignmentParametersSize, eAlignmentParametersSize);
 
-          for (const auto& [colSurface, cols] : alignState.alignedSurfaces) {
-            const auto& [dstCol, srcCol] = cols;
-            sumChi2SecondDerivative
-                .block<eAlignmentParametersSize, eAlignmentParametersSize>(
-                    dstRow * eAlignmentParametersSize,
-                    dstCol * eAlignmentParametersSize) +=
-                alignState.alignmentToChi2SecondDerivative.block(
-                    srcRow * eAlignmentParametersSize,
-                    srcCol * eAlignmentParametersSize, eAlignmentParametersSize,
-                    eAlignmentParametersSize);
-          }
+        for (const auto& [colSurface, cols] : alignState.alignedSurfaces) {
+          const auto& [dstCol, srcCol] = cols;
+          sumChi2SecondDerivative
+              .block<eAlignmentParametersSize, eAlignmentParametersSize>(
+                  dstRow * eAlignmentParametersSize,
+                  dstCol * eAlignmentParametersSize) +=
+              alignState.alignmentToChi2SecondDerivative.block(
+                  srcRow * eAlignmentParametersSize,
+                  srcCol * eAlignmentParametersSize, eAlignmentParametersSize,
+                  eAlignmentParametersSize);
         }
       }
     }
-    // Check if the chi2 second derivative matrix inverse is valid
-    if (sumChi2SecondDerivative.inverse().hasNaN()) {
-      ACTS_ERROR("Chi2 second derivative has NaN");
+    // Get the inverse of chi2 second derivative matrix
+    // @Todo: use more stable method for solving the inverse
+    ActsMatrixX<BoundParametersScalar> sumChi2SecondDerivativeInverse =
+        ActsMatrixX<BoundParametersScalar>::Zero(alignResult.dof,
+                                                 alignResult.dof);
+    sumChi2SecondDerivativeInverse = sumChi2SecondDerivative.inverse();
+    if (sumChi2SecondDerivativeInverse.hasNaN()) {
+      ACTS_ERROR("Chi2 second derivative inverse has NaN");
       return AlignmentError::AlignmentParametersUpdateFailure;
     }
 
@@ -220,11 +228,13 @@ struct Alignment {
         ActsVectorX<BoundParametersScalar>::Zero(alignResult.dof);
     alignResult.alignmentCovariance = ActsMatrixX<BoundParametersScalar>::Zero(
         alignResult.dof, alignResult.dof);
-    // Alignment parameters change
+    // Solve the linear equation to get alignment parameters change
     alignResult.deltaAlignmentParameters =
-        sumChi2SecondDerivative.inverse() * sumChi2Derivative;
+        -sumChi2SecondDerivative.fullPivLu().solve(sumChi2Derivative);
+    ACTS_VERBOSE("alignResult.deltaAlignmentParameters = \n "
+                 << alignResult.deltaAlignmentParameters);
     // Alignment parameters covariance
-    alignResult.alignmentCovariance = 2 * sumChi2SecondDerivative.inverse();
+    alignResult.alignmentCovariance = 2 * sumChi2SecondDerivativeInverse;
     // chi2 change
     alignResult.deltaChi2 = 0.5 * sumChi2Derivative.transpose() *
                             alignResult.deltaAlignmentParameters;
@@ -279,7 +289,7 @@ struct Alignment {
       ACTS_VERBOSE("iIter = " << iIter
                               << ", deltaChi2 = " << alignRes.deltaChi2);
       // Check if it has converged against the provided precision
-      if (alignRes.deltaChi2 <= alignOptions.deltaChi2CutOff) {
+      if (std::abs(alignRes.deltaChi2) <= alignOptions.deltaChi2CutOff) {
         converged = true;
         break;
       }

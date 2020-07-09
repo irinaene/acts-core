@@ -126,6 +126,7 @@ TrackAlignmentState trackAlignmentState(
     const auto surface = &ts.referenceSurface();
     auto it = idxedAlignSurfaces.find(surface);
     if (it != idxedAlignSurfaces.end()) {
+      isAlignable = true;
       // Remember the surface and its index
       alignState.alignedSurfaces[surface].first = it->second;
       nAlignSurfaces++;
