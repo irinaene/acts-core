@@ -12,7 +12,7 @@
 #include <string>        // for string printing
 #include <system_error>  // bring in std::error_code et al
 
-namespace Acts {
+namespace FW {
 // This is the custom error code enum
 enum class AlignmentError {
   NoAlignmentDofOnTrack = 1,
@@ -48,13 +48,13 @@ extern inline const detail::AlignmentErrorCategory& AlignmentErrorCategory() {
   return c;
 }
 
-inline std::error_code make_error_code(Acts::AlignmentError e) {
-  return {static_cast<int>(e), Acts::AlignmentErrorCategory()};
+inline std::error_code make_error_code(FW::AlignmentError e) {
+  return {static_cast<int>(e), FW::AlignmentErrorCategory()};
 }
-}  // namespace Acts
+}  // namespace FW
 
 namespace std {
 // register with STL
 template <>
-struct is_error_code_enum<Acts::AlignmentError> : std::true_type {};
+struct is_error_code_enum<FW::AlignmentError> : std::true_type {};
 }  // namespace std
