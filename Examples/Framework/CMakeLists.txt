@@ -13,7 +13,8 @@ add_library(
   src/Validation/DuplicationPlotTool.cpp
   src/Validation/TrackSummaryPlotTool.cpp
   src/Validation/ProtoTrackClassification.cpp
-  src/Validation/ResPlotTool.cpp)
+  src/Validation/ResPlotTool.cpp
+  src/Validation/MLTrackClassifier.cpp)
 target_include_directories(
   ActsExamplesFramework
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
