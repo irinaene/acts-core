@@ -10,6 +10,7 @@
 
 #include <vector>
 
+#include "ACTFW/EventData/SimSourceLink.hpp"
 #include "Acts/EventData/MultiTrajectory.hpp"
 #include "Acts/Utilities/Definitions.hpp"
 
@@ -38,7 +39,7 @@ class MLTrackClassifier {
   ///
   /// @return the predicted track label of the trajectory
   TrackLabels predictTrackLabel(
-    const Acts::MultiTrajectory<source_link_t>& multiTraj,
+    const Acts::MultiTrajectory<SimSourceLink>& multiTraj,
     const size_t& entryIndex);
 
   /// @brief getter for the number of layers in the neural network
