@@ -13,6 +13,7 @@
 #include "ACTFW/Validation/DuplicationPlotTool.hpp"
 #include "ACTFW/Validation/EffPlotTool.hpp"
 #include "ACTFW/Validation/FakeRatePlotTool.hpp"
+#include "ACTFW/Validation/MLTrackClassifier.hpp"
 #include "ACTFW/Validation/TrackSummaryPlotTool.hpp"
 #include "Acts/Utilities/Units.hpp"
 
@@ -55,6 +56,10 @@ class CKFPerformanceWriter final : public WriterT<TrajectoryContainer> {
     size_t nMeasurementsMin = 9;
     /// Min transverse momentum
     double ptMin = 1_GeV;
+    /// Neural network track classifier
+    MLTrackClassifier neuralNetworkClassifier;
+    /// flag to use neural network for track classification
+    bool useMLTrackClassifier = false;
   };
 
   /// Construct from configuration and log level.
