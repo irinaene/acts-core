@@ -156,25 +156,41 @@ FW::ProcessCode FW::CKFPerformanceWriter::writeT(
       }
       // Fill fake rate plots
       m_fakeRatePlotTool.fill(m_fakeRatePlotCache, fittedParameters, isFake);
+
+      // Use neural network classification for duplication rate plots
+      // Currently, the network can only handle good/duplicate classification,
+      // so need to manually exclude fake tracks
+      if (m_cfg.useMLTrackClassifier && !isFake) {
+        FW::MLTrackClassifier::TrackLabels predictedLabel = 
+            m_cfg.neuralNetworkClassifier.predictTrackLabel(mj, trackTip);
+        bool isDuplicated = 
+            predictedLabel == FW::MLTrackClassifier::TrackLabels::duplicate;
+        // Fill the duplication rate
+        m_duplicationPlotTool.fill(m_duplicationPlotCache, fittedParameters,
+                                   isDuplicated);
+      }
     }  // end all trajectories in a multiTrajectory
   }    // end all multiTrajectories
 
-  // Loop over all truth-matched reco tracks for duplication rate plots
-  for (auto& [particleId, matchedTracks] : matched) {
-    // Sort the reco tracks matched to this particle by the number of majority
-    // hits
-    std::sort(matchedTracks.begin(), matchedTracks.end(),
-              [](const RecoTrackInfo& lhs, const RecoTrackInfo& rhs) {
-                return lhs.first > rhs.first;
-              });
-    for (size_t itrack = 0; itrack < matchedTracks.size(); itrack++) {
-      const auto& [nMajorityHits, fittedParameters] = matchedTracks.at(itrack);
-      // The tracks with maximum number of majority hits is taken as the 'real'
-      // track; others are as 'duplicated'
-      bool isDuplicated = (itrack != 0);
-      // Fill the duplication rate
-      m_duplicationPlotTool.fill(m_duplicationPlotCache, fittedParameters,
-                                 isDuplicated);
+  // Use truth-based classification for duplication rate plots
+  if (!m_cfg.useMLTrackClassifier) {
+    // Loop over all truth-matched reco tracks for duplication rate plots
+    for (auto& [particleId, matchedTracks] : matched) {
+      // Sort the reco tracks matched to this particle by the number of majority
+      // hits
+      std::sort(matchedTracks.begin(), matchedTracks.end(),
+                [](const RecoTrackInfo& lhs, const RecoTrackInfo& rhs) {
+                  return lhs.first > rhs.first;
+                });
+      for (size_t itrack = 0; itrack < matchedTracks.size(); itrack++) {
+        const auto& [nMajorityHits, fittedParameters] = matchedTracks.at(itrack);
+        // The tracks with maximum number of majority hits is taken as the 'real'
+        // track; others are as 'duplicated'
+        bool isDuplicated = (itrack != 0);
+        // Fill the duplication rate
+        m_duplicationPlotTool.fill(m_duplicationPlotCache, fittedParameters,
+                                  isDuplicated);
+      }
     }
   }
 
