@@ -15,6 +15,7 @@
 #include "ACTFW/Io/Csv/CsvParticleReader.hpp"
 #include "ACTFW/Io/Csv/CsvPlanarClusterReader.hpp"
 #include "ACTFW/Io/Performance/CKFPerformanceWriter.hpp"
+#include "ACTFW/Io/Performance/CKFPerformanceWriterOptions.hpp"
 #include "ACTFW/Options/CommonOptions.hpp"
 #include "ACTFW/Plugins/BField/BFieldOptions.hpp"
 #include "ACTFW/TrackFinding/TrackFindingAlgorithm.hpp"
@@ -44,6 +45,7 @@ int main(int argc, char* argv[]) {
   detector.addOptions(desc);
   Options::addBFieldOptions(desc);
   Options::addTrackFindingOptions(desc);
+  Options::addCKFPerformanceWriterOptions(desc);
 
   auto vm = Options::parse(desc, argc, argv);
   if (vm.empty()) {
@@ -145,7 +147,7 @@ int main(int argc, char* argv[]) {
       std::make_shared<TrackFindingAlgorithm>(trackFindingCfg, logLevel));
 
   // Write CKF performance data
-  CKFPerformanceWriter::Config perfWriterCfg;
+  auto perfWriterCfg = Options::readCKFPerformanceWriterConfig(vm);
   perfWriterCfg.inputParticles = inputParticles;
   perfWriterCfg.inputTrajectories = trackFindingCfg.outputTrajectories;
   perfWriterCfg.outputDir = outputDir;
