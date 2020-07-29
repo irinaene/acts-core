@@ -38,24 +38,4 @@ install(
   TARGETS
   ActsRecCKFTracks
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-  
-add_executable(
-    ActsRecCKFTracksWithML
-    RecCKFTracksWithML.cpp)
-target_link_libraries(
-    ActsRecCKFTracksWithML
-    PRIVATE
-    ActsExamplesFramework
-    ActsExamplesCommon
-    ActsExamplesDigitization
-    ActsExamplesTrackFinding
-    ActsExamplesDetectorGeneric
-    ActsExamplesMagneticField
-    ActsExamplesIoCsv
-    ActsExamplesIoPerformance)
-
-install(
-  TARGETS
-  ActsRecCKFTracksWithML
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
