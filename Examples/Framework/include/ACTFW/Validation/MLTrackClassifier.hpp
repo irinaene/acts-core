@@ -40,7 +40,7 @@ class MLTrackClassifier {
   /// @return the predicted track label of the trajectory
   TrackLabels predictTrackLabel(
     const Acts::MultiTrajectory<SimSourceLink>& multiTraj,
-    const size_t& entryIndex);
+    const size_t& entryIndex) const;
 
   /// @brief getter for the number of layers in the neural network
   ///

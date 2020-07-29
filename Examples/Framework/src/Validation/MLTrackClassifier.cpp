@@ -35,7 +35,7 @@ FW::MLTrackClassifier::MLTrackClassifier() {
 
 FW::MLTrackClassifier::TrackLabels FW::MLTrackClassifier::predictTrackLabel(
     const Acts::MultiTrajectory<SimSourceLink>& multiTraj,
-    const size_t& entryIndex) {
+    const size_t& entryIndex) const {
   // get the trajectory summary info
   auto trajState =
           Acts::MultiTrajectoryHelpers::trajectoryState(multiTraj, entryIndex);
