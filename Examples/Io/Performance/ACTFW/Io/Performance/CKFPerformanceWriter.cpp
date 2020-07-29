@@ -162,7 +162,8 @@ FW::ProcessCode FW::CKFPerformanceWriter::writeT(
       // so need to manually exclude fake tracks
       if (m_cfg.useMLTrackClassifier && !isFake) {
         FW::MLTrackClassifier::TrackLabels predictedLabel = 
-            m_cfg.neuralNetworkClassifier.predictTrackLabel(mj, trackTip);
+            m_cfg.neuralNetworkClassifier.predictTrackLabel(
+                mj, trackTip, m_cfg.decisionThreshProb);
         bool isDuplicated = 
             predictedLabel == FW::MLTrackClassifier::TrackLabels::duplicate;
         // Fill the duplication rate

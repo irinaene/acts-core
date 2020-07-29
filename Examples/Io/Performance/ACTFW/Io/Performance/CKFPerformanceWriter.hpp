@@ -60,6 +60,8 @@ class CKFPerformanceWriter final : public WriterT<TrajectoryContainer> {
     MLTrackClassifier neuralNetworkClassifier;
     /// flag to use neural network for track classification
     bool useMLTrackClassifier = false;
+    /// threshold probability for neural network to classify track as duplicate 
+    double decisionThreshProb = 0.5;
   };
 
   /// Construct from configuration and log level.

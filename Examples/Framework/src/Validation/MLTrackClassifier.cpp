@@ -35,7 +35,10 @@ FW::MLTrackClassifier::MLTrackClassifier() {
 
 FW::MLTrackClassifier::TrackLabels FW::MLTrackClassifier::predictTrackLabel(
     const Acts::MultiTrajectory<SimSourceLink>& multiTraj,
-    const size_t& entryIndex) const {
+    const size_t& entryIndex, const double& decisionThreshProb) const {
+  // check the decision threshold is a probability
+  assert(((decisionThreshProb >= 0.) && (decisionThreshProb <= 1.)) && 
+         "Decision threshold probability is not in [0, 1].");
   // get the trajectory summary info
   auto trajState =
           Acts::MultiTrajectoryHelpers::trajectoryState(multiTraj, entryIndex);
@@ -65,7 +68,7 @@ FW::MLTrackClassifier::TrackLabels FW::MLTrackClassifier::predictTrackLabel(
 
   // the output layer computes how confident the network is that the track is a
   // duplicate; the decision threshold is taken to be the default 50%
-  if (outputLayer2[0] > 0.5) {
+  if (outputLayer2[0] > decisionThreshProb) {
       return TrackLabels::duplicate;
   } else {
       return TrackLabels::good;
