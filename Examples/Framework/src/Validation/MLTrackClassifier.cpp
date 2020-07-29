@@ -101,7 +101,7 @@ Acts::ActsVectorXd weightedInput(
 // function that applies ReLU activation to the layer input
 Acts::ActsVectorXd reluActivation(Acts::ActsVectorXd input) {
   // relu(z) = max(0, z)
-  Acts::ActsVectorXd reluInput = input.array().max(0);
+  Acts::ActsVectorXd reluInput = input.cwiseMax(0);
   return reluInput;
 }
 
