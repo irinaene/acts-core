@@ -19,19 +19,9 @@ Acts::ActsVectorXd sigmoidActivation(Acts::ActsVectorXd input);
 
 // member functions
 
-FW::MLTrackClassifier::MLTrackClassifier() {
-  // weights matrices are hard-coded for now
-  // NOTE: the last column of each weights matrix corresponds to the bias term
-  Acts::ActsMatrixXd weights1(3, 4);
-  weights1 << -0.03418384, -0.9836691 , -1.6070178,  2.732191,
-              -0.05473871,  1.0925077 ,  1.1935325, -0.7073934,
-              -0.03230026,  0.8401243 ,  0.9102905, -0.7160956;
-  m_weightsPerLayer.push_back(weights1);
-
-  Acts::ActsMatrixXd weights2(1, 4);
-  weights2 << -0.86220664,  0.5226268 ,  0.7121912, -2.0974905;
-  m_weightsPerLayer.push_back(weights2);
-}
+FW::MLTrackClassifier::MLTrackClassifier(
+    std::vector<Acts::ActsMatrixXd>& weightsPerLayer)
+    : m_weightsPerLayer{weightsPerLayer} {}
 
 FW::MLTrackClassifier::TrackLabels FW::MLTrackClassifier::predictTrackLabel(
     const Acts::MultiTrajectory<SimSourceLink>& multiTraj,

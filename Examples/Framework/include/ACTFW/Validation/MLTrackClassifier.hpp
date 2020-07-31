@@ -26,8 +26,13 @@ class MLTrackClassifier {
         fake
     };
 
-  /// @brief Constructor
-  MLTrackClassifier();
+  /// @brief Default constructor
+  MLTrackClassifier() = default;
+
+  /// @brief Parametrized constructor
+  ///
+  /// @param vector that holds the weights matrix for each layer
+  MLTrackClassifier(std::vector<Acts::ActsMatrixXd>& weightsPerLayer);
 
   /// @brief Default destructor
   ~MLTrackClassifier() = default;
