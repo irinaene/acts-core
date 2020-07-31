@@ -24,9 +24,12 @@
 #include "ACTFW/TruthTracking/TruthSeedSelector.hpp"
 #include "ACTFW/Utilities/Options.hpp"
 #include "ACTFW/Utilities/Paths.hpp"
+#include "ACTFW/Validation/MLTrackClassifier.hpp"
 #include <Acts/Utilities/Units.hpp>
+#include <Acts/Utilities/Definitions.hpp>
 
 #include <memory>
+#include <vector>
 
 using namespace Acts::UnitLiterals;
 using namespace FW;
@@ -151,6 +154,19 @@ int main(int argc, char* argv[]) {
   perfWriterCfg.inputParticles = inputParticles;
   perfWriterCfg.inputTrajectories = trackFindingCfg.outputTrajectories;
   perfWriterCfg.outputDir = outputDir;
+  // Add trained neural network instance
+  std::vector<Acts::ActsMatrixXd> weightsPerLayer;
+  // NOTE: the last column of each weights matrix corresponds to the bias term
+  Acts::ActsMatrixXd weights1(3, 4);
+  weights1 << -0.03418384, -0.9836691 , -1.6070178,  2.732191,
+              -0.05473871,  1.0925077 ,  1.1935325, -0.7073934,
+              -0.03230026,  0.8401243 ,  0.9102905, -0.7160956;
+  weightsPerLayer.push_back(weights1);
+  Acts::ActsMatrixXd weights2(1, 4);
+  weights2 << -0.86220664,  0.5226268 ,  0.7121912, -2.0974905;
+  weightsPerLayer.push_back(weights2);
+  MLTrackClassifier exampleMLClassifier{weightsPerLayer};
+  perfWriterCfg.neuralNetworkClassifier = exampleMLClassifier;
   sequencer.addWriter(
       std::make_shared<CKFPerformanceWriter>(perfWriterCfg, logLevel));
 
