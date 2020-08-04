@@ -7,6 +7,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include <cassert>
+#include <stdexcept>
 
 #include "ACTFW/Validation/MLTrackClassifier.hpp"
 #include "Acts/EventData/MultiTrajectoryHelpers.hpp"
@@ -27,8 +28,10 @@ FW::MLTrackClassifier::TrackLabels FW::MLTrackClassifier::predictTrackLabel(
     const Acts::MultiTrajectory<SimSourceLink>& multiTraj,
     const size_t& entryIndex, const double& decisionThreshProb) const {
   // check the decision threshold is a probability
-  assert(((decisionThreshProb >= 0.) && (decisionThreshProb <= 1.)) && 
-         "Decision threshold probability is not in [0, 1].");
+  if ((decisionThreshProb < 0.) || (decisionThreshProb > 1.)) {
+    throw std::invalid_argument("predictTrackLabel: Decision threshold "
+                                "probability is not in [0, 1].");
+  }
   // get the trajectory summary info
   auto trajState =
           Acts::MultiTrajectoryHelpers::trajectoryState(multiTraj, entryIndex);
@@ -71,7 +74,9 @@ size_t FW::MLTrackClassifier::getNumberofLayers() const {
 
 Acts::ActsMatrixXd FW::MLTrackClassifier::getWeightsAtLayer(
     size_t& layerIndex) const {
-  assert((layerIndex < m_weightsPerLayer.size()) && "Layer index invalid.");
+  if (layerIndex >= m_weightsPerLayer.size()) {
+    throw std::invalid_argument("getWeightsAtLayer: Layer index invalid.");
+  }
   return m_weightsPerLayer[layerIndex];
 }
 
@@ -85,8 +90,10 @@ Acts::ActsVectorXd weightedInput(
   Acts::ActsVectorXd inputWithBias(input.size() + 1);
   inputWithBias << input, 1.;
   // check that dimensions are compatible for matrix - vector multiplication
-  assert((weights.cols() == inputWithBias.rows()) && 
-  "Matrix dims incompatible with vector dims.");
+  if (weights.cols() != inputWithBias.rows()) {
+    throw std::runtime_error("weightedInput: Matrix dimensions incompatible "
+                             "with vector dimensions.");
+  }
   // weighted_input = weights_matrix * input
   return weights * inputWithBias;
 }
