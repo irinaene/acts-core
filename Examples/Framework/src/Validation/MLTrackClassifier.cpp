@@ -14,14 +14,14 @@
 
 // forward declarations
 Acts::ActsVectorXd weightedInput(
-    Acts::ActsMatrixXd weights, Acts::ActsVectorXd input);
-Acts::ActsVectorXd reluActivation(Acts::ActsVectorXd input);
-Acts::ActsVectorXd sigmoidActivation(Acts::ActsVectorXd input);
+    const Acts::ActsMatrixXd& weights, const Acts::ActsVectorXd& input);
+Acts::ActsVectorXd reluActivation(const Acts::ActsVectorXd& input);
+Acts::ActsVectorXd sigmoidActivation(const Acts::ActsVectorXd& input);
 
 // member functions
 
 FW::MLTrackClassifier::MLTrackClassifier(
-    std::vector<Acts::ActsMatrixXd>& weightsPerLayer)
+    const std::vector<Acts::ActsMatrixXd>& weightsPerLayer)
     : m_weightsPerLayer{weightsPerLayer} {}
 
 FW::MLTrackClassifier::TrackLabels FW::MLTrackClassifier::predictTrackLabel(
@@ -73,7 +73,7 @@ size_t FW::MLTrackClassifier::getNumberofLayers() const {
 }
 
 Acts::ActsMatrixXd FW::MLTrackClassifier::getWeightsAtLayer(
-    size_t& layerIndex) const {
+    const size_t& layerIndex) const {
   if (layerIndex >= m_weightsPerLayer.size()) {
     throw std::invalid_argument("getWeightsAtLayer: Layer index invalid.");
   }
@@ -85,7 +85,7 @@ Acts::ActsMatrixXd FW::MLTrackClassifier::getWeightsAtLayer(
 
 // function to compute the weighted input for a layer
 Acts::ActsVectorXd weightedInput(
-    Acts::ActsMatrixXd weights, Acts::ActsVectorXd input) {
+    const Acts::ActsMatrixXd& weights, const Acts::ActsVectorXd& input) {
   // add bias term to input vector
   Acts::ActsVectorXd inputWithBias(input.size() + 1);
   inputWithBias << input, 1.;
@@ -99,14 +99,14 @@ Acts::ActsVectorXd weightedInput(
 }
 
 // function that applies ReLU activation to the layer input
-Acts::ActsVectorXd reluActivation(Acts::ActsVectorXd input) {
+Acts::ActsVectorXd reluActivation(const Acts::ActsVectorXd& input) {
   // relu(z) = max(0, z)
   Acts::ActsVectorXd reluInput = input.cwiseMax(0);
   return reluInput;
 }
 
 // function that applies sigmoid activation to the layer input
-Acts::ActsVectorXd sigmoidActivation(Acts::ActsVectorXd input) {
+Acts::ActsVectorXd sigmoidActivation(const Acts::ActsVectorXd& input) {
   // sigmoid(z) = exp(z) / (1 + exp(z))
   Eigen::ArrayXd expInput = input.array().exp();
   Acts::ActsVectorXd sigmoidInput;

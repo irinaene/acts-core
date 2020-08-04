@@ -32,7 +32,7 @@ class MLTrackClassifier {
   /// @brief Parametrized constructor
   ///
   /// @param vector that holds the weights matrix for each layer
-  MLTrackClassifier(std::vector<Acts::ActsMatrixXd>& weightsPerLayer);
+  MLTrackClassifier(const std::vector<Acts::ActsMatrixXd>& weightsPerLayer);
 
   /// @brief Default destructor
   ~MLTrackClassifier() = default;
@@ -57,7 +57,7 @@ class MLTrackClassifier {
   /// @param layerIndex identifies the location of the layer in the network
   ///
   /// @return matrix of weights specific to the layer indexed by layerIndex
-  Acts::ActsMatrixXd getWeightsAtLayer(size_t& layerIndex) const;
+  Acts::ActsMatrixXd getWeightsAtLayer(const size_t& layerIndex) const;
 
  private:
   /// Vector that holds the weights matrix for each layer, in the order the 
