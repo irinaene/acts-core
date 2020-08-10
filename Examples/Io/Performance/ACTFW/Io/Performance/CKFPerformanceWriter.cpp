@@ -161,10 +161,10 @@ FW::ProcessCode FW::CKFPerformanceWriter::writeT(
       // Currently, the network can only handle good/duplicate classification,
       // so need to manually exclude fake tracks
       if (m_cfg.useMLTrackClassifier && !isFake) {
-        FW::MLTrackClassifier::TrackLabels predictedLabel = 
+        FW::MLTrackClassifier::TrackLabels predictedLabel =
             m_cfg.neuralNetworkClassifier.predictTrackLabel(
                 mj, trackTip, m_cfg.decisionThreshProb);
-        bool isDuplicated = 
+        bool isDuplicated =
             predictedLabel == FW::MLTrackClassifier::TrackLabels::duplicate;
         // Fill the duplication rate
         m_duplicationPlotTool.fill(m_duplicationPlotCache, fittedParameters,
@@ -184,13 +184,14 @@ FW::ProcessCode FW::CKFPerformanceWriter::writeT(
                   return lhs.first > rhs.first;
                 });
       for (size_t itrack = 0; itrack < matchedTracks.size(); itrack++) {
-        const auto& [nMajorityHits, fittedParameters] = matchedTracks.at(itrack);
-        // The tracks with maximum number of majority hits is taken as the 'real'
-        // track; others are as 'duplicated'
+        const auto& [nMajorityHits, fittedParameters] =
+            matchedTracks.at(itrack);
+        // The tracks with maximum number of majority hits is taken as the
+        // 'real' track; others are as 'duplicated'
         bool isDuplicated = (itrack != 0);
         // Fill the duplication rate
         m_duplicationPlotTool.fill(m_duplicationPlotCache, fittedParameters,
-                                  isDuplicated);
+                                   isDuplicated);
       }
     }
   }

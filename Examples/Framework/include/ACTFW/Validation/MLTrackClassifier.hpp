@@ -1,6 +1,6 @@
 // This file is part of the Acts project.
 //
-// Copyright (C) 2020 Acts project team
+// Copyright (C) 2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -20,11 +20,7 @@ namespace FW {
 class MLTrackClassifier {
  public:
   /// @brief The labels for track quality
-  enum TrackLabels {
-        good,
-        duplicate,
-        fake
-    };
+  enum TrackLabels { good, duplicate, fake };
 
   /// @brief Default constructor
   MLTrackClassifier() = default;
@@ -44,8 +40,8 @@ class MLTrackClassifier {
   ///
   /// @return the predicted track label of the trajectory
   TrackLabels predictTrackLabel(
-    const Acts::MultiTrajectory<SimSourceLink>& multiTraj,
-    const size_t& entryIndex, const double& decisionThreshProb) const;
+      const Acts::MultiTrajectory<SimSourceLink>& multiTraj,
+      const size_t& entryIndex, const double& decisionThreshProb) const;
 
   /// @brief getter for the number of layers in the neural network
   ///
@@ -60,7 +56,7 @@ class MLTrackClassifier {
   Acts::ActsMatrixXd getWeightsAtLayer(const size_t& layerIndex) const;
 
  private:
-  /// Vector that holds the weights matrix for each layer, in the order the 
+  /// Vector that holds the weights matrix for each layer, in the order the
   /// layers appear in the network
   std::vector<Acts::ActsMatrixXd> m_weightsPerLayer;
 };

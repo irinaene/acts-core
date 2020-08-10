@@ -1,6 +1,6 @@
 // This file is part of the Acts project.
 //
-// Copyright (C) 2020 Acts project team
+// Copyright (C) 2020 CERN for the benefit of the Acts project
 //
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -8,8 +8,8 @@
 
 #include "ACTFW/Io/Performance/CKFPerformanceWriterOptions.hpp"
 
-#include <boost/program_options.hpp>
 #include <string>
+#include <boost/program_options.hpp>
 
 void FW::Options::addCKFPerformanceWriterOptions(
     FW::Options::Description& desc) {
@@ -26,8 +26,8 @@ FW::CKFPerformanceWriter::Config FW::Options::readCKFPerformanceWriterConfig(
   using Config = typename FW::CKFPerformanceWriter::Config;
   Config ckfPerfWriterCfg;
 
-  ckfPerfWriterCfg.useMLTrackClassifier = 
-    variables["use-ml-track-classification"].template as <bool>();
+  ckfPerfWriterCfg.useMLTrackClassifier =
+      variables["use-ml-track-classification"].template as<bool>();
 
   return ckfPerfWriterCfg;
 }
