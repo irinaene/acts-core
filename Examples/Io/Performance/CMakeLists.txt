@@ -9,7 +9,7 @@ target_include_directories(
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_link_libraries(
   ActsExamplesIoPerformance
-  PUBLIC ActsExamplesFramework
+  PUBLIC ActsExamplesFramework Boost::program_options
   PRIVATE ActsCore ROOT::Core ROOT::Tree)
 
 install(
